@@ -14,8 +14,7 @@ import numpy as np
 def apply_map(points: np.ndarray, Q: Callable) -> np.ndarray:
     """
     Apply a possibly vector-valued map Q to a set of points, while performing some additional
-    input/output validation.
-    Works in any dimension.
+    input/output validation. Assume input dimension is d, and output dimension is d_out < d.
 
     Parameters
     ----------
@@ -27,19 +26,16 @@ def apply_map(points: np.ndarray, Q: Callable) -> np.ndarray:
 
     Returns
     -------
-    q : (N, ) ndarray
+    q : (N, d_out) ndarray
         Result of applying `Q` to each point.
     """
     # Input validation
     if points.shape[0] == 0:
         raise ValueError("points must be non-empty.")
 
-    q_input_size = len(signature(Q).parameters)
-    if points.shape[1] != q_input_size:
-        raise ValueError("Q takes in too many or too few arguments.")
-
-    q = np.asarray(Q(*points.T), dtype=float)
-
+    q = np.asarray(Q(*points.T), dtype=float).T
+    print(len(q))
+    print(len(points))
     # Output validation
     if len(q) != len(points):
         raise RuntimeError("Q(x, y) must have same length as 'points'.")

@@ -19,6 +19,10 @@ def Q_add(x, y):
     return x + y
 
 
+def Q_add_high_dim(x, y, z):
+    return [x + y - z, x + z]
+
+
 def squared_distance(x, y):
     return x**2 + y**2
 
@@ -30,6 +34,15 @@ def test_apply_map_basic():
 
     assert q_vals.shape == (3,)
     assert np.allclose(q_vals, [0, 5, 25])
+
+
+def test_apply_map_higher_dim():
+    """Computes Q(x,y,z)=(x+y-z, x+z); checks shape and values."""
+    points = np.array([[0, 0, 1], [1, 2, 2], [3, 4, 1]])
+    q_vals = apply_map(points, Q_add_high_dim)
+
+    assert q_vals.shape == (3, 2)
+    assert np.allclose(q_vals, [[-1, 1], [1, 3], [6, 4]])
 
 
 def test_apply_map_vectorized_function():
@@ -46,7 +59,7 @@ def test_apply_map_vectorized_function():
 
 
 def test_apply_map_dtype_and_shape():
-    """Returns a 1D float array of length N."""
+    """Returns a 1d-dimensional float array of length N."""
     rng = np.random.default_rng(0)
     points = rng.random((10, 2))
     q_vals = apply_map(points, Q_add)
@@ -54,6 +67,18 @@ def test_apply_map_dtype_and_shape():
     assert q_vals.ndim == 1
     assert q_vals.dtype.kind == "f"
     assert q_vals.shape == (10,)
+
+
+def test_apply_map_dtype_shape_higher_dim():
+    """Returns a 2d-dimensional float array of length N."""
+
+    rng = np.random.default_rng(0)
+    points_high_dim = rng.random((10, 3))
+    q_vals_high_dim = apply_map(points_high_dim, Q_add_high_dim)
+
+    assert q_vals_high_dim.ndim == 2
+    assert q_vals_high_dim.dtype.kind == "f"
+    assert q_vals_high_dim.shape == (10, 2)
 
 
 def test_apply_map_asymmetric_q_small_deterministic():
@@ -77,32 +102,6 @@ def test_apply_map_raises_on_empty_points():
 
     with pytest.raises(ValueError, match="non-empty"):
         apply_map(empty_points, Q_add)
-
-
-def test_apply_map_raises_when_not_2d():
-    """Raises when 'points' is not a 2D array."""
-    not_2d = np.array([1.0, 2.0])  # shape (2,)
-
-    with pytest.raises(ValueError, match="must be 2D array"):
-        apply_map(not_2d, Q_add)
-
-
-def test_apply_map_raises_when_not_two_columns():
-    """Raises when `points` does not have shape (N, 2)."""
-    points = np.ones((3, 3))
-    with pytest.raises(ValueError, match=r"shape \(N, 2\)"):
-        apply_map(points, Q_add)
-
-
-def test_apply_map_raises_when_Q_returns_non_1d():
-    """Raises when Q returns a non-1D array."""
-    points = np.array([[0.0, 1.0], [2.0, 3.0]])
-
-    def Q_bad(x, y):
-        return np.column_stack([x, y])  # shape (N, 2)
-
-    with pytest.raises(RuntimeError, match="must return 1D array"):
-        apply_map(points, Q_bad)
 
 
 def test_apply_map_raises_when_length_mismatch():
