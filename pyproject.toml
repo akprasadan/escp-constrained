@@ -1,0 +1,29 @@
+[project]
+name = "escp-continuity"
+maintainers = [
+  {name = "Akshay Prasadan", email = "akprasadan@gmail.com"}]
+version = "0.0.0"
+description = "Implement examples used in paper on continuity of the eSCP operator."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.14"
+dependencies = [
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.3",
+    "pandas>=3.0.1",
+    "pytest>=9.0.2",
+    "scipy>=1.17.1",
+    "ucimlrepo>=0.0.7",
+]
+
+[project.urls]
+Repository = "https://github.com/akprasadan/escp-continuity.git"
+
+[build-system]
+requires = ["uv_build>=0.11.1,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+module-name = "src"
