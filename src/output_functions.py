@@ -34,9 +34,11 @@ def apply_map(points: np.ndarray, Q: Callable) -> np.ndarray:
         raise ValueError("points must be non-empty.")
 
     q = np.asarray(Q(*points.T), dtype=float).T
-    print(len(q))
-    print(len(points))
-    # Output validation
+
+    # If q is a (N, ) vector, reshape it be (N, 1) for consistency with higher dim cases
+    if q.ndim == 1:
+        q = q.reshape(len(q), 1)
+
     if len(q) != len(points):
         raise RuntimeError("Q(x, y) must have same length as 'points'.")
 
@@ -59,7 +61,7 @@ def make_partition(min_vals: np.ndarray, max_vals: np.ndarray, M: int) -> np.nda
     Returns
     -------
     numpy.ndarray
-        Array of shape (d, M + 1) with bin edges.
+        Array of shape (M + 1, d) with bin edges.
     """
     # Basic input validation
     if not (isinstance(M, int) and M >= 1):
@@ -77,7 +79,6 @@ def make_partition(min_vals: np.ndarray, max_vals: np.ndarray, M: int) -> np.nda
     partition_all_dimensions = (
         min_vals[:, None] + (max_vals - min_vals)[:, None] * unscaled_partition
     )
-
     return partition_all_dimensions.T
 
 
@@ -90,7 +91,7 @@ def counts_observed(q_data: np.ndarray, bin_edges: np.ndarray) -> np.ndarray:
     ----------
     q_data : (K, d) numpy array
         Array of observed values.
-    bin_edges : (d, M + 1) numpy array
+    bin_edges : (M + 1, d) numpy array
         Array of M + 1 bin edges defining the intervals for each dimension.
 
     Returns
@@ -98,6 +99,7 @@ def counts_observed(q_data: np.ndarray, bin_edges: np.ndarray) -> np.ndarray:
     counts : (d, M) numpy array of ints
         Counts for each bin in each dimension.
     """
-    counts, _ = np.histogramdd(q_data, bins=bin_edges)
+    # np.histogramdd needs (d, M + 1) bins array input
+    counts, _ = np.histogramdd(q_data, bins=bin_edges.T)
 
     return counts
