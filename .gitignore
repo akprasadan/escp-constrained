@@ -11,7 +11,3 @@ __pycache__/
 
 # MacOS Metadata
 .DS_Store
-
-# Generated data and plots
-plots/
-data/
