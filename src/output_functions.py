@@ -96,7 +96,7 @@ def counts_observed(q_data: np.ndarray, bin_edges: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    counts : (d, M) numpy array of ints
+    counts.T : (M, M, ..., M) shaped (d-many) numpy array of ints
         Counts for each bin in each dimension.
     """
     # np.histogramdd needs (d, M + 1) bins array input

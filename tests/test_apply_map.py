@@ -19,7 +19,7 @@ def Q_add(x, y):
     return x + y
 
 
-def Q_add_high_dim(x, y, z):
+def Q_dim3_to_2(x, y, z):
     return [x + y - z, x + z]
 
 
@@ -39,7 +39,7 @@ def test_apply_map_basic():
 def test_apply_map_3_to_2_dim_q():
     """Computes Q(x,y,z)=(x+y-z, x+z); checks shape and values."""
     points = np.array([[0, 0, 1], [1, 2, 2], [3, 4, 1]])
-    q_vals = apply_map(points, Q_add_high_dim)
+    q_vals = apply_map(points, Q_dim3_to_2)
 
     assert q_vals.shape == (3, 2)
     assert np.allclose(q_vals, [[-1, 1], [1, 3], [6, 4]])
@@ -103,7 +103,7 @@ def test_apply_map_dtype_shape_higher_dim():
 
     rng = np.random.default_rng(0)
     points_high_dim = rng.random((10, 3))
-    q_vals_high_dim = apply_map(points_high_dim, Q_add_high_dim)
+    q_vals_high_dim = apply_map(points_high_dim, Q_dim3_to_2)
 
     assert q_vals_high_dim.ndim == 2
     assert q_vals_high_dim.dtype.kind == "f"
