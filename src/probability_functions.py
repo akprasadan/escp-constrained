@@ -172,7 +172,8 @@ def prob_over_grid(
         tile_maxes = edges[idx + 1, np.arange(input_dim)]
         A = rect_A(tile_mins, tile_maxes)  # E.g., [x0,x1) x [y0,y1) x [z_0, z_1)
         mask_A = mask_in_A(prior_data, A)
-        prior_A_counts = counts_observed(q_prior_data[mask_A], bin_edges)
+        q_prior_counts_A = q_prior_data[mask_A]
+        prior_A_counts = counts_observed(q_prior_counts_A, bin_edges)
         p_A = prob_A(prior_counts, prior_A_counts, obs_counts, K)
         rows.append({"mins": tile_mins, "maxes": tile_maxes, "prob": p_A})
     df = pd.DataFrame(rows)

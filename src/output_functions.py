@@ -97,10 +97,13 @@ def counts_observed(q_data: np.ndarray, bin_edges: np.ndarray) -> np.ndarray:
         Counts for each bin in each dimension. For d = 1, returns (M, ) shaped array.
     """
     M = len(bin_edges) - 1
-    d = q_data.ndim
 
     if len(q_data) == 0:
-        return np.zeros((M,) * d, dtype=np.int64)
+        # Temporarily ensure (0, ) arrays are treated as (0, 1) arrays, e.g.
+        # just to get the correct dimension
+        q_data_reshaped = np.atleast_2d(q_data)
+        dim = q_data_reshaped.shape[1]
+        return np.zeros((M,) * dim, dtype=np.int64)
 
     # np.histogramdd needs (d, M + 1) bins array input
     counts, _ = np.histogramdd(q_data, bins=bin_edges.T)

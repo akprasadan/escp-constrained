@@ -146,7 +146,7 @@ def test_mask_in_A_excludes_all_points():
     """If A excludes all points, mask is all False and masked counts are zeros.
     Higher dim version below."""
     bin_edges = np.array([0.0, 1.0, 2.0, 3.0])[:, None]
-    q_prior_data = np.array([0.2, 0.8, 1.2, 1.9, 2.1, 2.7])
+    q_prior_data = np.array([0.2, 0.8, 1.2, 1.9, 2.1, 2.7])[:, None]
     prior_data = np.array(
         [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6], [0.7, 0.8], [0.2, 0.9], [0.4, 0.1]],
     )
@@ -156,7 +156,7 @@ def test_mask_in_A_excludes_all_points():
     mask_A = mask_in_A(prior_data, A_none)
     prior_counts = counts_observed(q_prior_data, bin_edges)
     prior_A_counts = counts_observed(q_prior_data[mask_A], bin_edges)
-
+    print(prior_A_counts)
     assert not mask_A.any()
     assert np.array_equal(prior_counts, [2, 2, 2])
     assert np.array_equal(prior_A_counts, [0, 0, 0])

@@ -35,7 +35,7 @@ def make_dummy_inputs(seed: int = 0, M_obs: int = 200, N_prior: int = 500):
     # Prior points subset of [0, 1]^2, so if Lambda contains this entire set,
     # probabilities will sum to 1.
     prior_data = rng.random((N_prior, 2))
-    q_prior_data = rng.random(N_prior)
+    q_prior_data = rng.random(N_prior)[:, None]
     bin_edges = np.linspace(0.0, 1.0, 11)[:, None]
     return q_data, prior_data, q_prior_data, bin_edges
 
@@ -334,8 +334,8 @@ def test_prob_mass_is_assigned_to_correct_x_column():
     y_prior = np.random.rand(N)
     prior_data = np.column_stack([x_prior, y_prior])
 
-    q_prior_data = np.zeros(N)
-    q_data = np.zeros(10)
+    q_prior_data = np.zeros(N)[:, None]
+    q_data = np.zeros(10)[:, None]
     bin_edges = np.array([[0.0], [1.0]])
 
     df = prob_over_grid(
@@ -367,8 +367,8 @@ def test_prob_mass_is_assigned_to_correct_y_row():
     prior_data = np.column_stack([x_prior, y_prior])
 
     # Make per-tile prob = fraction of points in tile (single q-bin)
-    q_prior_data = np.zeros(N)
-    q_data = np.zeros(10)
+    q_prior_data = np.zeros(N)[:, None]
+    q_data = np.zeros(10)[:, None]
     bin_edges = np.array([[0.0], [1.0]])
 
     df = prob_over_grid(
@@ -399,8 +399,8 @@ def test_prob_is_zero_when_all_prior_points_outside_box():
     y_prior = np.full(N, 2.0)  # y > ymax
     prior_data = np.column_stack([x_prior, y_prior])
 
-    q_prior_data = np.zeros(N)
-    q_data = np.zeros(10)
+    q_prior_data = np.zeros(N)[:, None]
+    q_data = np.zeros(10)[:, None]
     bin_edges = np.array([[0.0], [1.0]])
 
     df = prob_over_grid(

@@ -25,7 +25,8 @@ class EstimationParams(TypedDict):
     J: int
     M: int
     Q: Callable[[np.ndarray, np.ndarray], np.ndarray]
-    lambda_bounds: tuple[float, float, float, float]
+    grid_mins: np.ndarray
+    grid_maxes: np.ndarray
     lambda_grid_size: int
     seed: int | None
 
@@ -34,7 +35,8 @@ FIXED_SCP_PARAMS: EstimationParams = {
     "J": 10000,
     "M": 20,
     "Q": lambda x, y: x**2 + 3 * y**2,
-    "lambda_bounds": (XMIN, XMAX, YMIN, YMAX),
+    "grid_mins": np.array([XMIN, YMIN]),
+    "grid_maxes": np.array([XMAX, YMAX]),
     "lambda_grid_size": 100,
     "seed": 20251028,
 }
@@ -158,13 +160,15 @@ def test_tgd_df_structure():
 def test_prior_df_q_matches_quadratic():
     "Check that prior_df correctly saved values of Q from x and y"
     Q = prior_df["x"] ** 2 + 3 * prior_df["y"] ** 2
-    assert np.allclose(Q.to_numpy(), prior_df["q"].to_numpy())
+    q_vals = prior_df["q"].apply(lambda num: num[0])
+    assert np.allclose(Q.to_numpy(), q_vals)
 
 
 def test_tgd_df_q_matches_quadratic():
     "Check that tgd_df correctly saved values of Q from x and y"
     Q = tgd_df["x"] ** 2 + 3 * tgd_df["y"] ** 2
-    assert np.allclose(Q.to_numpy(), tgd_df["q"].to_numpy())
+    q_vals = tgd_df["q"].apply(lambda num: num[0])
+    assert np.allclose(Q.to_numpy(), q_vals)
 
 
 def test_synthetic_and_empirical_match():

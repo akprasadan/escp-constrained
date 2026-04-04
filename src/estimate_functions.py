@@ -30,7 +30,8 @@ def synthetic_scp(
     Q: Callable[[np.ndarray, np.ndarray], np.ndarray],
     tgd: Callable[[np.random.Generator, int], np.ndarray],
     prior: Callable[[np.random.Generator, int], np.ndarray],
-    lambda_bounds: tuple[float, float, float, float],
+    grid_mins: np.ndarray,
+    grid_maxes: np.ndarray,
     lambda_grid_size: int,
     seed: int | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -58,8 +59,9 @@ def synthetic_scp(
         Sampler for the trial-generating distribution on Lambda.
     prior : Callable[[np.random.Generator, int], np.ndarray]
         Sampler for the prior distribution on Lambda.
-    lambda_bounds : tuple[float, float, float, float]
-        (xmin, xmax, ymin, ymax) bounds for Lambda
+    grid_mins, grid_maxes : (d_L, ) np.ndarray
+        Array of bounds for Lambda.
+        Require grid_mins[i] < grid_maxes[i] for each i = 0, 1, ..., d_L - 1
     lambda_grid_size : int
         Number of grid bins per axis on Lambda (total ``lambda_grid_size**2`` tiles).
     seed : int or None
@@ -74,8 +76,7 @@ def synthetic_scp(
     tgd_df : pandas.DataFrame
         TGD samples on Lambda with their `q = Q(lambda)`.
     """
-    xmin, xmax, ymin, ymax = lambda_bounds
-    check_lambda_bounds(xmin, xmax, ymin, ymax)
+    check_lambda_bounds(grid_mins, grid_maxes)
 
     # Obtain independent seeds for TGD and prior
     master_seed = np.random.default_rng(seed)
@@ -86,15 +87,15 @@ def synthetic_scp(
     tgd_data = sample_distr(n=K, seed=tgd_seed, distr=tgd)
 
     # Subset the observations inside the given range
-    lambda_bounds_mask = rect_A(xmin, xmax, ymin, ymax)
+    lambda_bounds_mask = rect_A(grid_mins, grid_maxes)
     tgd_mask = lambda_bounds_mask(tgd_data)
     tgd_data = tgd_data[tgd_mask]
 
     q_data = apply_map(tgd_data, Q)
 
     # 2) Partition q_data into M bins
-    q_min, q_max = float(np.min(q_data)), float(np.max(q_data))
-    bin_edges = make_partition(q_min, q_max, M)
+    q_mins, q_maxes = np.min(q_data, axis=0), np.max(q_data, axis=0)
+    bin_edges = make_partition(q_mins, q_maxes, M)
 
     # 3) Sample from prior and compute q_prior_data = Q(lambda_j). Then
     # subset those inside given range
@@ -110,7 +111,8 @@ def synthetic_scp(
         prior_data=prior_data,
         q_prior_data=q_prior_data,
         bin_edges=bin_edges,
-        grid_bounds=lambda_bounds,
+        grid_mins=grid_mins,
+        grid_maxes=grid_maxes,
         h=lambda_grid_size,
     )
     # Normalize the probability
@@ -118,9 +120,11 @@ def synthetic_scp(
 
     # 5) Package prior and TGD samples with respective Q evaluations into dataframes
     prior_df = pd.DataFrame(
-        {"source": "prior", "x": prior_data[:, 0], "y": prior_data[:, 1], "q": q_prior_data}
+        {"source": "prior", "x": prior_data[:, 0], "y": prior_data[:, 1], "q": list(q_prior_data)}
     )
-    tgd_df = pd.DataFrame({"source": "tgd", "x": tgd_data[:, 0], "y": tgd_data[:, 1], "q": q_data})
+    tgd_df = pd.DataFrame(
+        {"source": "tgd", "x": tgd_data[:, 0], "y": tgd_data[:, 1], "q": list(q_data)}
+    )
 
     return probs_df, prior_df, tgd_df
 
@@ -131,7 +135,8 @@ def empirical_scp(
     M: int,
     Q: Callable[[np.ndarray, np.ndarray], np.ndarray],
     prior: Callable[[np.random.Generator, int], np.ndarray],
-    lambda_bounds: tuple[float, float, float, float],
+    grid_mins: np.ndarray,
+    grid_maxes: np.ndarray,
     lambda_grid_size: int,
     seed: int | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -157,8 +162,9 @@ def empirical_scp(
         Map Q: Lambda -> D, called as ``Q(x, y)``.
     prior : Callable[[np.random.Generator, int], np.ndarray]
         Sampler for the prior distribution on Lambda.
-    lambda_bounds : tuple[float, float, float, float]
-        (xmin, xmax, ymin, ymax) bounds for Lambda
+    grid_mins, grid_maxes : (d_L, ) np.ndarray
+        Array of bounds for Lambda.
+        Require grid_mins[i] < grid_maxes[i] for each i = 0, 1, ..., d_L - 1
     lambda_grid_size : int
         Number of grid bins per axis on Lambda (total ``lambda_grid_size**2`` tiles).
     seed : int or None
@@ -171,8 +177,7 @@ def empirical_scp(
     prior_df : pandas.DataFrame
         Prior samples on Lambda with their `q = Q(lambda)`.
     """
-    xmin, xmax, ymin, ymax = lambda_bounds
-    check_lambda_bounds(xmin, xmax, ymin, ymax)
+    check_lambda_bounds(grid_mins, grid_maxes)
 
     # Prior seed only (TGD is empirical here)
     master = np.random.default_rng(seed)
@@ -183,13 +188,13 @@ def empirical_scp(
     prior_seed = int(master.integers(0, 2**63 - 1))
 
     # 1) Partition q_data into M bins
-    q_min, q_max = float(np.min(q_data)), float(np.max(q_data))
-    bin_edges = make_partition(q_min, q_max, M)
+    q_mins, q_maxes = np.min(q_data, axis=0), np.max(q_data, axis=0)
+    bin_edges = make_partition(q_mins, q_maxes, M)
 
     # 2) Sample from prior and compute q_prior_data = Q(lambda_j)
     # Subset prior points outside our given range
     prior_data = sample_distr(J, seed=prior_seed, distr=prior)
-    lambda_bounds_mask = rect_A(xmin, xmax, ymin, ymax)
+    lambda_bounds_mask = rect_A(grid_mins, grid_maxes)
     prior_mask = lambda_bounds_mask(prior_data)
     prior_data = prior_data[prior_mask]
 
@@ -201,7 +206,8 @@ def empirical_scp(
         prior_data=prior_data,
         q_prior_data=q_prior_data,
         bin_edges=bin_edges,
-        grid_bounds=lambda_bounds,
+        grid_mins=grid_mins,
+        grid_maxes=grid_maxes,
         h=lambda_grid_size,
     )
     # Normalize the probability
@@ -213,7 +219,7 @@ def empirical_scp(
             "source": "prior",
             "x": prior_data[:, 0],
             "y": prior_data[:, 1],
-            "q": q_prior_data,
+            "q": list(q_prior_data),
         }
     )
 
