@@ -9,20 +9,26 @@ from collections.abc import Callable
 import numpy as np
 
 
-def check_lambda_bounds(xmin: float, xmax: float, ymin: float, ymax: float) -> None:
-    """Utility function that validates input bounds in Lambda space.
+def check_lambda_bounds(min_vals: np.ndarray, max_vals: np.ndarray) -> None:
+    """Utility function that validates input bounds in Lambda (or D) space.
 
     Parameters
     ----------
-    xmin, xmax, ymin, ymax : float
-        Specify bounds of a rectangle [xmin, xmax] X [ymin, ymax]
+    mins, maxes : np.ndarray
+        Rectangle bounds; require mins[i] < maxes[i] for each i.
 
     Raises
     --------
     ValueError : If bounds are invalid.
     """
-    if not (xmin < xmax and ymin < ymax):
-        raise ValueError("Require xmin < xmax and ymin < ymax.")
+    d = len(min_vals)
+
+    if d != len(max_vals):
+        raise ValueError("Incompatible lengths (dimension) for min_vals and max_vals.")
+
+    for i in range(d):
+        if not (min_vals[i] < max_vals[i]):
+            raise ValueError(f"min_vals >= max_vals for dimension {i}.")
 
 
 def mask_in_A(
@@ -53,7 +59,7 @@ def mask_in_A(
     >>> mask_in_A(points, A)
     array([True, False])
     """
-    if points.shape[0] == 0:
+    if len(points) == 0:
         raise ValueError("points must be non-empty.")
 
     if A is None:
@@ -61,33 +67,29 @@ def mask_in_A(
     return A(points)
 
 
-def rect_A(
-    xmin: float, xmax: float, ymin: float, ymax: float
-) -> Callable[[np.ndarray], np.ndarray]:
+def rect_A(mins: np.ndarray, maxes: np.ndarray) -> Callable[[np.ndarray], np.ndarray]:
     """
-    Produce rectangular mask with half-open bounds:
-    A = [xmin, xmax) x [ymin, ymax)
+    Produce d-dimensional rectangular mask with half-open bounds:
+    A = [x1_min, x1_max) x [x2_min, x2_max) x ... x [xd_min, xd_max]
 
     Excluding right/top edges of rectangle prevents double-counting when constructing grid.
 
     Parameters
     ----------
-    xmin, xmax, ymin, ymax : float
-        Rectangle bounds; require xmin < xmax and ymin < ymax.
+    mins, maxes : np.ndarray
+        Rectangle bounds; require mins[i] < maxes[i] for each i.
 
     Returns
     -------
     _A : Callable[[np.ndarray], np.ndarray]
-        Returns boolean mask that acts on a numpy array of shape (N, 2)
-        and returns a numpy array of bools of shape (N, ), indicating
+        Returns boolean mask that acts on a numpy array of shape (N, d)
+        and returns a numpy array of bools of shape (N, d), indicating
         whether each point belongs to the rectangle.
     """
     # Check we input valid bounds
-    check_lambda_bounds(xmin, xmax, ymin, ymax)
+    check_lambda_bounds(mins, maxes)
 
     def _A(points: np.ndarray) -> np.ndarray:
-        x_vals, y_vals = points[:, 0], points[:, 1]
-
-        return (xmin <= x_vals) & (x_vals < xmax) & (ymin <= y_vals) & (y_vals < ymax)
+        return np.all((points >= mins) & (points < maxes), axis=1)
 
     return _A

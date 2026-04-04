@@ -16,9 +16,9 @@ from src.box_functions import rect_A as rect_A
 
 
 # Half-open: [0, 1) x [0, 1)
-simple_square = rect_A(0, 1, 0, 1)
+simple_square = rect_A(np.array([0, 0]), np.array([1, 1]))
 # Half-open: [0, 5) x [0, 1)
-simple_rectangle = rect_A(0, 5, 0, 1)
+simple_rectangle = rect_A(np.array([0, 0]), np.array([5, 1]))
 
 
 def test_rect_A_interior_membership():
@@ -120,22 +120,22 @@ def test_rect_A_no_points_selected():
     """Separated rectangle selects no points."""
     xs, ys = np.meshgrid(np.linspace(0, 1, 4), np.linspace(0, 1, 4))
     points = np.column_stack([xs.ravel(), ys.ravel()])
-    A = rect_A(2.0, 3.0, 2.0, 3.0)
+    A = rect_A(np.array([2, 2]), np.array([3, 3]))
     mask = A(points)
     assert not mask.any()
 
 
 def test_rect_A_raises_when_x_bounds_invalid():
     """Invalid x-bounds raise ValueError."""
-    with pytest.raises(ValueError, match="Require xmin < xmax and ymin < ymax"):
-        rect_A(1.0, 1.0, 0.0, 1.0)  # xmin == xmax
-    with pytest.raises(ValueError, match="Require xmin < xmax and ymin < ymax"):
-        rect_A(2.0, 1.0, 0.0, 1.0)  # xmin > xmax
+    with pytest.raises(ValueError, match="min_vals >= max_vals"):
+        rect_A(np.array([1, 0]), np.array([1, 1]))  # xmin == xmax
+    with pytest.raises(ValueError, match="min_vals >= max_vals"):
+        rect_A(np.array([2, 0]), np.array([1, 1]))  # xmin > xmax
 
 
 def test_rect_A_raises_when_y_bounds_invalid():
     """Invalid y-bounds raise ValueError."""
-    with pytest.raises(ValueError, match="Require xmin < xmax and ymin < ymax"):
-        rect_A(0.0, 1.0, 1.0, 1.0)  # ymin == ymax
-    with pytest.raises(ValueError, match="Require xmin < xmax and ymin < ymax"):
-        rect_A(0.0, 1.0, 2.0, 1.0)  # ymin > ymax
+    with pytest.raises(ValueError, match="min_vals >= max_vals"):
+        rect_A(np.array([0, 1]), np.array([1, 1]))  # ymin == ymax
+    with pytest.raises(ValueError, match="min_vals >= max_vals"):
+        rect_A(np.array([0, 2]), np.array([1, 1]))  # ymin > ymax

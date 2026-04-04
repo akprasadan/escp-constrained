@@ -120,33 +120,33 @@ def test_make_partition_widths_sum_to_range():
 
 def test_make_partition_raises_when_min_not_less_than_max_equal():
     """Raises when min_vals == max_vals."""
-    with pytest.raises(ValueError, match="min_vals < max_vals"):
+    with pytest.raises(ValueError, match="min_vals >= max_vals"):
         make_partition(np.array([1.0]), np.array([1.0]), 3)
 
 
 def test_make_partition_raises_when_min_not_less_than_max_equal_higher_dim():
     """Raises when min_vals == max_vals."""
-    with pytest.raises(ValueError, match="min_vals < max_vals"):
+    with pytest.raises(ValueError, match="min_vals >= max_vals"):
         make_partition(np.array([1.0, 2.0]), np.array([1.0, 3.0]), 3)
 
     # Same thing but swap components with error
-    with pytest.raises(ValueError, match="min_vals < max_vals"):
+    with pytest.raises(ValueError, match="min_vals >= max_vals"):
         make_partition(np.array([1.0, 2.0]), np.array([2.0, 2.0]), 3)
 
 
 def test_make_partition_raises_when_min_not_less_than_max_reversed():
     """Raises when min_vals > max_vals."""
-    with pytest.raises(ValueError, match="min_vals < max_vals"):
+    with pytest.raises(ValueError, match="min_vals >= max_vals"):
         make_partition(np.array([5.0]), np.array([1.0]), 3)
 
 
 def test_make_partition_raises_when_min_not_less_than_max_reversed_higher_dim():
     """Raises when min_vals > max_vals."""
-    with pytest.raises(ValueError, match="min_vals < max_vals"):
+    with pytest.raises(ValueError, match="min_vals >= max_vals"):
         make_partition(np.array([5.0, 7.0]), np.array([1.0, 8.0]), 3)
 
     # Same thing but swap which component draws the error
-    with pytest.raises(ValueError, match="min_vals < max_vals"):
+    with pytest.raises(ValueError, match="min_vals >= max_vals"):
         make_partition(np.array([5.0, 7.0]), np.array([7.0, 6.0]), 5)
 
 

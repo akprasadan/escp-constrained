@@ -10,6 +10,8 @@ from inspect import signature
 
 import numpy as np
 
+from src.box_functions import check_lambda_bounds as check_lambda_bounds
+
 
 def apply_map(points: np.ndarray, Q: Callable) -> np.ndarray:
     """
@@ -67,13 +69,8 @@ def make_partition(min_vals: np.ndarray, max_vals: np.ndarray, M: int) -> np.nda
     if not (isinstance(M, int) and M >= 1):
         raise ValueError("M must be an integer >= 1.")
 
-    d = len(min_vals)
-    if d != len(max_vals):
-        raise ValueError("Incompatible lengths (dimension) for min_vals and max_vals.")
-
-    for i in range(d):
-        if not (min_vals[i] < max_vals[i]):
-            raise ValueError(f"min_vals < max_vals for dimension {i}.")
+    # Make sure mins/max values of right length, orientation
+    check_lambda_bounds(min_vals, max_vals)
 
     unscaled_partition = np.linspace(0, 1, M + 1)
     partition_all_dimensions = (
@@ -96,9 +93,15 @@ def counts_observed(q_data: np.ndarray, bin_edges: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    counts.T : (M, M, ..., M) shaped (d-many) numpy array of ints
-        Counts for each bin in each dimension.
+    counts : (M, M, ..., M) shaped (d-many) numpy array of ints
+        Counts for each bin in each dimension. For d = 1, returns (M, ) shaped array.
     """
+    M = len(bin_edges) - 1
+    d = q_data.ndim
+
+    if len(q_data) == 0:
+        return np.zeros((M,) * d)
+
     # np.histogramdd needs (d, M + 1) bins array input
     counts, _ = np.histogramdd(q_data, bins=bin_edges.T)
 
