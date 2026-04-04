@@ -60,19 +60,8 @@ def test_prob_A_length_mismatch_raises():
     prior_counts = np.array([5, 5])
     prior_A_counts = np.array([2, 3, 1])  # Wrong length
     obs_counts = np.array([4, 6])
-    with pytest.raises(ValueError, match="Incompatible array lengths"):
+    with pytest.raises(ValueError, match="Incompatible array shapes"):
         prob_A(prior_counts, prior_A_counts, obs_counts, 10)
-
-
-def test_prob_A_ndim_checks():
-    """Non-1D arrays should raise ValueError. Make all of prior_counts, prior_A_counts, and obs_counts a 2D array
-    so that the incompatible array lengths error is not called.
-    """
-    prior_counts = np.array([[5, 5]])  # 2D
-    prior_A_counts = np.array([[2, 3]])
-    obs_counts = np.array([[4, 1]])
-    with pytest.raises(ValueError, match="is not a 1D array"):
-        prob_A(prior_counts, prior_A_counts, obs_counts, 5)
 
 
 def test_prob_A_prior_A_counts_gt_prior_counts_raises():

@@ -100,9 +100,16 @@ def counts_observed(q_data: np.ndarray, bin_edges: np.ndarray) -> np.ndarray:
     d = q_data.ndim
 
     if len(q_data) == 0:
-        return np.zeros((M,) * d)
+        return np.zeros((M,) * d, dtype=np.int64)
 
     # np.histogramdd needs (d, M + 1) bins array input
     counts, _ = np.histogramdd(q_data, bins=bin_edges.T)
+
+    # Validate that we got integer values
+    if not np.array_equal(counts, np.rint(counts)):
+        raise ValueError("Counts must be integers.")
+
+    # Safely convert to integer now
+    counts = counts.astype(np.int64)
 
     return counts
