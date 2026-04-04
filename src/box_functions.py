@@ -82,8 +82,8 @@ def rect_A(mins: np.ndarray, maxes: np.ndarray) -> Callable[[np.ndarray], np.nda
     Returns
     -------
     _A : Callable[[np.ndarray], np.ndarray]
-        Returns boolean mask that acts on a numpy array of shape (N, d)
-        and returns a numpy array of bools of shape (N, d), indicating
+        Returns boolean mask that acts on a numpy array of shape (N, )
+        and returns a numpy array of bools of shape (N, ), indicating
         whether each point belongs to the rectangle.
     """
     # Check we input valid bounds

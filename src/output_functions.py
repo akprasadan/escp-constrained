@@ -5,7 +5,7 @@ Helper functions involving d-dimensional output space D, including applying the 
 on n-dimensional input space and partitioning the output space.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from inspect import signature
 
 import numpy as np

@@ -21,7 +21,7 @@ from src.box_functions import mask_in_A as mask_in_A
 
 def test_mask_in_A_all_points_in_rect_A_equal_bins():
     """If A includes all points, mask is all True and masked counts match unmasked counts."""
-    bin_edges = np.array([0.0, 1.0, 2.0, 3.0])[:, None]
+    bin_edges = np.array([0.0, 1.0, 2.0, 3.0])[:, None]  # Note we convert (N, ) array to (N, 1)
     q_prior_data = np.array([0.2, 0.8, 1.2, 1.9, 2.1, 2.7])
     prior_data = np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6], [0.7, 0.8], [0.2, 0.9], [0.4, 0.1]])
 
