@@ -35,15 +35,15 @@ def mask_in_A(
     points: np.ndarray, A: Callable[[np.ndarray], np.ndarray] | None = None
 ) -> np.ndarray:
     """
-    Compute a boolean mask indicating which points lie in a subset A of R^2.
+    Compute a boolean mask indicating which points lie in a subset A of R^d.
 
     Parameters
     ----------
-    points : (N, 2) numpy array
-        Array of N 2D points to test for membership.
+    points : (N, d) numpy array
+        Array of N d-dimensional points to test for membership.
     A : Callable[[np.ndarray], np.ndarray] or None
         A mask defining the subset A. It must accept `points`
-        (shape (N, 2)) and return a boolean array of shape (N, ) where True
+        (shape (N, d)) and return a boolean array of shape (N, ) where True
         means the point is in A.
         If A is None, all points are considered inside A.
 

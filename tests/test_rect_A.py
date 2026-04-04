@@ -99,13 +99,13 @@ def test_rect_A_includes_lower_boundaries_square():
     """Left/bottom edges are included; bottom-left corner is included."""
     pts_on_lower_edges = np.array(
         [
-            [0.0, 0.0],  # bottom-left (included)
-            [0.0, 0.5],  # left edge
-            [0.5, 0.0],  # bottom edge
-            [0.99, 0.0],  # bottom edge near right
-            [0.0, 0.99],  # left edge near top
-            [0.0, 0.01],  # left edge near bottom
-            [0.01, 0.0],  # bottom edge near left
+            [0, 0],  # bottom-left (included)
+            [0, 0.5],  # left edge
+            [0.5, 0],  # bottom edge
+            [0.99, 0],  # bottom edge near right
+            [0, 0.99],  # left edge near top
+            [0, 0.01],  # left edge near bottom
+            [0.01, 0],  # bottom edge near left
         ]
     )
     mask = simple_square(pts_on_lower_edges)
@@ -120,13 +120,13 @@ def test_rect_A_includes_lower_boundaries_cube():
     """
     pts_on_lower_edges = np.array(
         [
-            [0.0, 0.5, 0.5],  # left face
-            [0.5, 0.5, 0.0],  # bottom face
-            [0.5, 0.0, 0.5],  # front face
-            [0.0, 0.5, 0.0],  # bottom-left edge
-            [0.0, 0.0, 0.5],  # left-front edge
-            [0.5, 0.0, 0.0],  # bottom-front edge
-            [0.0, 0.0, 0.0],  # bottom-left-front corner
+            [0, 0.5, 0.5],  # left face
+            [0.5, 0.5, 0],  # bottom face
+            [0.5, 0, 0.5],  # front face
+            [0, 0.5, 0],  # bottom-left edge
+            [0, 0, 0.5],  # left-front edge
+            [0.5, 0, 0],  # bottom-front edge
+            [0, 0, 0],  # bottom-left-front corner
         ]
     )
     mask = simple_cube(pts_on_lower_edges)
@@ -137,15 +137,15 @@ def test_rect_A_excludes_upper_boundaries_square():
     """Right/top edges are excluded; any point with x==xmax or y==ymax is out."""
     pts_on_upper_edges = np.array(
         [
-            [1.0, 0.0],  # bottom-right corner
-            [1.0, 1.0],  # top-right corner
-            [0.0, 1.0],  # top-left corner
-            [0.5, 1.0],  # top edge
-            [1.0, 0.5],  # right edge
-            [0.01, 1.0],  # top edge near left
-            [0.99, 1.0],  # top edge near right
-            [1.0, 0.01],  # right edge near bottom
-            [1.0, 0.99],  # right edge near top
+            [1, 0],  # bottom-right corner
+            [1, 1],  # top-right corner
+            [0, 1],  # top-left corner
+            [0.5, 1],  # top edge
+            [1, 0.5],  # right edge
+            [0.01, 1],  # top edge near left
+            [0.99, 1],  # top edge near right
+            [1, 0.01],  # right edge near bottom
+            [1, 0.99],  # right edge near top
         ]
     )
     mask = simple_square(pts_on_upper_edges)
@@ -158,25 +158,25 @@ def test_rect_A_excludes_upper_boundaries_cube():
     """
     pts_on_upper_edges = np.array(
         [
-            [1.0, 0.5, 0.5],  # right face
-            [1.0, 0.0, 0.5],  # right-front edge
-            [1.0, 1.0, 0.5],  # right-back edge
-            [0.5, 1.0, 0.5],  # back face
-            [0.5, 1.0, 0.0],  # bottom-back edge
-            [1.0, 0.5, 0.0],  # bottom-right edge
-            [0.5, 0.5, 1.0],  # top face
-            [0.0, 0.5, 1.0],  # top-left edge
-            [1.0, 0.5, 1.0],  # top-right edge
-            [0.5, 0.0, 1.0],  # top-front edge
-            [0.5, 1.0, 1.0],  # top-back edge
-            [0.0, 1.0, 0.5],  # left-back edge
-            [1.0, 1.0, 1.0],  # top-right-back corner
-            [1.0, 0.0, 1.0],  # top-right-front corner
-            [0.0, 1.0, 1.0],  # top-left-back corner
-            [0.0, 0.0, 1.0],  # top-left-front corner
-            [0.0, 1.0, 0.0],  # bottom-left-back corner
-            [1.0, 1.0, 0.0],  # bottom-right-back corner
-            [1.0, 0.0, 0.0],  # bottom-right-front corner
+            [1, 0.5, 0.5],  # right face
+            [1, 0, 0.5],  # right-front edge
+            [1, 1, 0.5],  # right-back edge
+            [0.5, 1, 0.5],  # back face
+            [0.5, 1, 0],  # bottom-back edge
+            [1, 0.5, 0],  # bottom-right edge
+            [0.5, 0.5, 1],  # top face
+            [0, 0.5, 1],  # top-left edge
+            [1, 0.5, 1],  # top-right edge
+            [0.5, 0, 1],  # top-front edge
+            [0.5, 1, 1],  # top-back edge
+            [0, 1, 0.5],  # left-back edge
+            [1, 1, 1],  # top-right-back corner
+            [1, 0, 1],  # top-right-front corner
+            [0, 1, 1],  # top-left-back corner
+            [0, 0, 1],  # top-left-front corner
+            [0, 1, 0],  # bottom-left-back corner
+            [1, 1, 0],  # bottom-right-back corner
+            [1, 0, 0],  # bottom-right-front corner
         ]
     )
     mask = simple_cube(pts_on_upper_edges)
@@ -235,6 +235,16 @@ def test_rect_A_no_points_selected_3d():
 
 def test_rect_A_raises_when_bounds_invalid():
     """Invalid bounds raise ValueError. Tests 2D or 3D examples."""
+    # Min and max values of incorrect length
+    with pytest.raises(ValueError, match="Incompatible lengths"):
+        rect_A(np.array([0, 0]), np.array([1, 1, 1]))
+
+    with pytest.raises(ValueError, match="Incompatible lengths"):
+        rect_A(np.array([0, 0, 0]), np.array([1, 1]))
+
+    with pytest.raises(ValueError, match="Incompatible lengths"):
+        rect_A(np.array([0]), np.array([1, 1]))
+
     # Bad x-value in 2D
     with pytest.raises(ValueError, match="min_vals >= max_vals"):
         rect_A(np.array([1, 0]), np.array([1, 1]))  # xmin == xmax
