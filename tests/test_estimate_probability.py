@@ -193,7 +193,9 @@ def test_prob_A_length_mismatch_raises_higher_dim():
 def test_prob_A_prior_A_counts_gt_prior_counts_raises():
     """prior_A_counts cannot exceed prior_counts for any bin."""
     prior_counts = np.array([3, 2])
-    prior_A_counts = np.array([4, 1])  # prior_A_counts[0] exceeds prior_counts[0]
+    prior_A_counts = np.array(
+        [4, 1]
+    )  # prior_A_counts[0] exceeds prior_counts[0]
     obs_counts = np.array([5, 5])
     with pytest.raises(ValueError, match="prior_A_counts > prior_counts"):
         prob_A(prior_counts, prior_A_counts, obs_counts, 10)
@@ -272,7 +274,9 @@ def test_prob_A_in_unit_interval_randomized_higher_dim():
     """Higher_dim: Randomized check that result is in [0, 1]."""
     rng = np.random.default_rng(0)
     prior_counts = rng.integers(0, 100, size=(3, 3))
-    prior_A_counts = np.where(prior_counts > 0, rng.integers(0, 100, size=(3, 3)), 0)
+    prior_A_counts = np.where(
+        prior_counts > 0, rng.integers(0, 100, size=(3, 3)), 0
+    )
     prior_A_counts = np.minimum(prior_A_counts, prior_counts)
     obs_counts = rng.integers(0, 100, size=(3, 3))
     K = int(obs_counts.sum())

@@ -14,7 +14,10 @@ from src.box_functions import check_lambda_bounds as check_lambda_bounds
 
 
 def probability_input_validation(
-    prior_counts: np.ndarray, prior_A_counts: np.ndarray, obs_counts: np.ndarray, K: int
+    prior_counts: np.ndarray,
+    prior_A_counts: np.ndarray,
+    obs_counts: np.ndarray,
+    K: int,
 ) -> None:
     """
     Checks that valid inputs are given into probability_functions.prob_A(). Assume
@@ -62,7 +65,10 @@ def probability_input_validation(
 
 
 def prob_A(
-    prior_counts: np.ndarray, prior_A_counts: np.ndarray, obs_counts: np.ndarray, K: int
+    prior_counts: np.ndarray,
+    prior_A_counts: np.ndarray,
+    obs_counts: np.ndarray,
+    K: int,
 ) -> float:
     """
     Estimate P(A) using the eSCP formula (Equation 4.5 in paper).
@@ -108,7 +114,9 @@ def prob_A(
     if not np.any(mask):
         return 0.0
 
-    prob = np.sum((prior_A_counts[mask] / prior_counts[mask]) * (obs_counts[mask] / K))
+    prob = np.sum(
+        (prior_A_counts[mask] / prior_counts[mask]) * (obs_counts[mask] / K)
+    )
 
     return prob
 
@@ -133,7 +141,7 @@ def prob_over_grid(
         Array of output values q_i, where q_i = Q(lambda_i), lambda_i ~ TGD
     prior_data : (J, d_L) np.ndarray
         Array of points lambda_i drawn from prior. May be outside the given boundaries.
-    q_prior_data : (J, d_L) numpy array
+    q_prior_data : (J, d_D) numpy array
         Evaluation of elements of prior_data by Q
     bin_edges : (M + 1, d_D) numpy array
         Array of M + 1 bin edges defining partition of output space D
@@ -160,8 +168,7 @@ def prob_over_grid(
     K = len(q_data)
 
     edges = make_partition(grid_mins, grid_maxes, h)
-
-    input_dim = prior_data.ndim
+    input_dim = prior_data.shape[1]
     # inside np.ndindex, we basically pass in (h, h, ..., h) in R^d
     # Then we get all indices in the box, i.e., elements of {0, 1, ..., h-1}^d
     # Then we loop over each one. We extract the bin_edges at that index
@@ -170,16 +177,34 @@ def prob_over_grid(
         idx = np.array(idx)
         tile_mins = edges[idx, np.arange(input_dim)]
         tile_maxes = edges[idx + 1, np.arange(input_dim)]
-        A = rect_A(tile_mins, tile_maxes)  # E.g., [x0,x1) x [y0,y1) x [z_0, z_1)
+
+        A = rect_A(
+            tile_mins, tile_maxes
+        )  # E.g., [x0,x1) x [y0,y1) x [z_0, z_1)
         mask_A = mask_in_A(prior_data, A)
         q_prior_counts_A = q_prior_data[mask_A]
         prior_A_counts = counts_observed(q_prior_counts_A, bin_edges)
         p_A = prob_A(prior_counts, prior_A_counts, obs_counts, K)
         rows.append({"mins": tile_mins, "maxes": tile_maxes, "prob": p_A})
+
     df = pd.DataFrame(rows)
-    if prior_data.ndim == 2:
-        df[["xmin", "ymin"]] = df["mins"].tolist()
-        df[["xmax", "ymax"]] = df["maxes"].tolist()
+
+    """For convenience, if the input data is 2 or 3 dimensional,
+    let's unwrap the mins and maxes columns to be {xmin, ymin, zmin} and
+    {xmax, ymax, zmax}, respectively, omitting the zmin, zmax columns if 2 dimensional.
+    In practice, we will only be using these dimensions."""
+
+    if input_dim in [2, 3]:
+        # yields ["x", "y"] if dim 2, or ["x", "y", "z"] if dim 3
+        axis_names = ["x", "y", "z"][:input_dim]
+        axis_min_names = [f"{ax}min" for ax in axis_names]
+        axis_max_names = [f"{ax}max" for ax in axis_names]
+
+        # unwrap the mins/maxes columns
+        df[axis_min_names] = df["mins"].tolist()
+        df[axis_max_names] = df["maxes"].tolist()
+
+        # remove now redundant columns
         df = df.drop(columns=["mins", "maxes"])
 
     return df

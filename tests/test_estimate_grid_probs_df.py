@@ -2,12 +2,12 @@
 Unit tests for `prob_over_grid()`.
 
 Tests:
-- Shape of final dataset (rows = h^2)
+- Shape of final dataset (rows = h^d in d-dimensions)
 - Input validation (bounds, h, length of input data)
 - Boundary correctness (min/max match inputs)
 - x and y edge construction (start/end at right place, have right spacing)
 - Grid contiguity: end of one subinterval is start of next
-- Grid has even spacing along either axis
+- Grid has even spacing along each axis
 - Grid spacing is non-degenerate and of expected length
 - Columns and their types are as expected
 - Probability check: h=1 implies prob=1; sum of probs = 1 across many cases
@@ -20,6 +20,7 @@ import numpy as np
 from pandas.api.types import is_numeric_dtype
 import pytest
 
+from src.output_functions import make_partition as make_partition
 from src.probability_functions import prob_over_grid as prob_over_grid
 
 
@@ -35,13 +36,39 @@ def make_dummy_inputs(seed: int = 0, M_obs: int = 200, N_prior: int = 500):
     # Prior points subset of [0, 1]^2, so if Lambda contains this entire set,
     # probabilities will sum to 1.
     prior_data = rng.random((N_prior, 2))
+    # Use [:, None] to make sure (N, ) arrays are treated as (N, 1) arrays.
     q_prior_data = rng.random(N_prior)[:, None]
     bin_edges = np.linspace(0.0, 1.0, 11)[:, None]
     return q_data, prior_data, q_prior_data, bin_edges
 
 
+def make_dummy_inputs_higher_dim(
+    seed: int = 0, M_obs: int = 200, N_prior: int = 500
+):
+    """A helper function to generate data.
+
+    - q_prior_data and prior_data share length N.
+    - q values in [0, 1]^2, bin_edges cover [0, 1]^2.
+    - prior_data in [0, 1]^3
+    """
+
+    rng = np.random.default_rng(seed)
+    # Draw M_obs many 2D vectors
+    q_data = rng.random((M_obs, 2))
+
+    # Prior points subset of [0, 1]^3, so if Lambda contains this entire set,
+    # probabilities will sum to 1.
+    prior_data = rng.random((N_prior, 3))
+    q_prior_data = rng.random((N_prior, 2))
+    bin_edges = make_partition(
+        min_vals=np.array([-0.1, -0.1]), max_vals=np.array([1.1, 1.1]), M=5
+    )
+    return q_data, prior_data, q_prior_data, bin_edges
+
+
 def test_rows_are_h_squared_loop():
-    """Output dataframe should have h^2 rows for each probability."""
+    """Output dataframe should have h^2 rows for each probability,
+    and in d-dimensions for Lambda, h^d."""
 
     q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs()
     for h in [1, 2, 3, 5, 10, 100]:
@@ -55,6 +82,20 @@ def test_rows_are_h_squared_loop():
             h=h,
         )
         assert len(df) == h * h
+
+    # Higher dimension too
+    q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs_higher_dim()
+    for h in [1, 2, 3, 5, 10, 25]:
+        df = prob_over_grid(
+            q_data,
+            prior_data,
+            q_prior_data,
+            bin_edges,
+            grid_mins=np.array([0, 0, 0]),
+            grid_maxes=np.array([10, 10, 10]),
+            h=h,
+        )
+        assert len(df) == h**3
 
 
 def test_invalid_inputs_raise():
@@ -80,13 +121,59 @@ def test_invalid_inputs_raise():
         with pytest.raises(ValueError, match=error_messages):
             prob_over_grid(q_data, prior_data, q_prior_data, bin_edges, **case)
 
+    # Higher dimensions
+    q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs_higher_dim()
+
+    invalid_cases = [
+        # Bad X bounds
+        dict(
+            grid_mins=np.array([1, 1, 0]), grid_maxes=np.array([0, 10, 1]), h=2
+        ),
+        dict(
+            grid_mins=np.array([2, 0, 5]), grid_maxes=np.array([1, 10, 15]), h=2
+        ),
+        # Bad Y bounds
+        dict(
+            grid_mins=np.array([0, 10, 0]), grid_maxes=np.array([10, 5, 1]), h=2
+        ),
+        dict(
+            grid_mins=np.array([0, 9, 2]), grid_maxes=np.array([10, 5, 4]), h=2
+        ),
+        # Bad Z bounds
+        dict(
+            grid_mins=np.array([0, 0, 5]), grid_maxes=np.array([10, 5, 1]), h=2
+        ),
+        dict(
+            grid_mins=np.array([0, 2, 2]), grid_maxes=np.array([10, 5, 0]), h=2
+        ),
+        # Bad h
+        dict(
+            grid_mins=np.array([0, 0, 0]), grid_maxes=np.array([1, 1, 1]), h=0
+        ),
+        dict(
+            grid_mins=np.array([0, 0, 0]), grid_maxes=np.array([1, 1, 1]), h=-3
+        ),
+        dict(
+            grid_mins=np.array([0, 0, 0]), grid_maxes=np.array([1, 1, 1]), h=1.5
+        ),
+        dict(
+            grid_mins=np.array([0, 0, 0]), grid_maxes=np.array([1, 1, 1]), h="4"
+        ),
+    ]
+    error_messages = r"min_vals >= max_vals|h must be an integer"
+    for case in invalid_cases:
+        with pytest.raises(ValueError, match=error_messages):
+            prob_over_grid(q_data, prior_data, q_prior_data, bin_edges, **case)
+
 
 def test_q_prior_data_prior_data_length_mismatch_raises():
-    """q_prior_data and prior_data must have the same length."""
+    """q_prior_data and prior_data must have the same length. Higher dim tests included too."""
 
     q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs()
     prior_data_bad = prior_data[:-1]  # mismatch
-    with pytest.raises(ValueError, match="q_prior_data and prior_data not same length"):
+    with pytest.raises(
+        ValueError, match="q_prior_data and prior_data not same length"
+    ):
         prob_over_grid(
             q_data,
             prior_data_bad,
@@ -97,9 +184,25 @@ def test_q_prior_data_prior_data_length_mismatch_raises():
             h=2,
         )
 
+    # Higher dimensions:
+    q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs_higher_dim()
+    prior_data_bad = prior_data[:-1]  # mismatch
+    with pytest.raises(
+        ValueError, match="q_prior_data and prior_data not same length"
+    ):
+        prob_over_grid(
+            q_data,
+            prior_data_bad,
+            q_prior_data,
+            bin_edges,
+            grid_mins=np.array([0, 0, 0]),
+            grid_maxes=np.array([1, 1, 1]),
+            h=3,
+        )
+
 
 def test_min_max_match_inputs():
-    """Min/Max boundaries must match the input box."""
+    """Min/Max boundaries must match the input box. In higher dimensions too."""
 
     q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs(seed=1)
     xmin, xmax, ymin, ymax, h = -3.25, 3.75, 5.5, 10.0, 3
@@ -117,6 +220,28 @@ def test_min_max_match_inputs():
     assert df["xmax"].max() == xmax
     assert df["ymin"].min() == ymin
     assert df["ymax"].max() == ymax
+
+    # Higher dimensions
+
+    q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs_higher_dim(
+        seed=1
+    )
+    df = prob_over_grid(
+        q_data,
+        prior_data,
+        q_prior_data,
+        bin_edges,
+        grid_mins=np.array([-3, -2, -1]),
+        grid_maxes=np.array([3, 5, 10]),
+        h=3,
+    )
+
+    assert df["xmin"].min() == -3
+    assert df["xmax"].max() == 3
+    assert df["ymin"].min() == -2
+    assert df["ymax"].max() == 5
+    assert df["zmin"].min() == -1
+    assert df["zmax"].max() == 10
 
 
 def test_x_and_y_grids_respect_bounds_and_spacing():
@@ -159,8 +284,62 @@ def test_x_and_y_grids_respect_bounds_and_spacing():
     assert np.allclose(np.diff(ymins), dy)
 
 
+def test_x_and_y_and_z_grids_respect_bounds_and_spacing():
+    """X and Y and Z grid edges start, end, and step according to their respective bounds."""
+    q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs_higher_dim(
+        seed=2
+    )
+    xmin, xmax = 0.0, 1.0
+    ymin, ymax = 10.0, 30.0
+    zmin, zmax = -1, 5
+    h = 4
+
+    df = prob_over_grid(
+        q_data,
+        prior_data,
+        q_prior_data,
+        bin_edges,
+        grid_mins=np.array([xmin, ymin, zmin]),
+        grid_maxes=np.array([xmax, ymax, zmax]),
+        h=h,
+    )
+
+    xmins = np.sort(df["xmin"].unique())
+    ymins = np.sort(df["ymin"].unique())
+    zmins = np.sort(df["zmin"].unique())
+
+    dx = (xmax - xmin) / h
+    dy = (ymax - ymin) / h
+    dz = (zmax - zmin) / h
+
+    assert dx != dy
+    assert dy != dz
+    assert dx != dz
+
+    # x grid starts/ends at the left/right bound
+    assert np.isclose(xmins[0], xmin)
+    assert np.isclose(xmins[-1] + dx, xmax)
+
+    # x grid edges are uniformly spaced by dx
+    assert np.allclose(np.diff(xmins), dx)
+
+    # y grid starts/ends at the left/right bound
+    assert np.isclose(ymins[0], ymin)
+    assert np.isclose(ymins[-1] + dy, ymax)
+
+    # y grid edges are uniformly spaced by dy
+    assert np.allclose(np.diff(ymins), dy)
+
+    # z grid starts/ends at the left/right bound
+    assert np.isclose(zmins[0], zmin)
+    assert np.isclose(zmins[-1] + dz, zmax)
+
+    # z grid edges are uniformly spaced by dz
+    assert np.allclose(np.diff(zmins), dz)
+
+
 def test_grid_has_expected_number_of_unique_edges():
-    """Grid has h unique xmin/xmax and ymin/ymax edges."""
+    """Grid has h unique xmin/xmax and ymin/ymax edges. In higher dimensions too."""
     q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs(seed=3)
     xmin, xmax, ymin, ymax, h = -7.0, 5.0, 2.0, 11.0, 7
 
@@ -173,11 +352,27 @@ def test_grid_has_expected_number_of_unique_edges():
         grid_maxes=np.array([xmax, ymax]),
         h=h,
     )
+    for edge in ["xmin", "xmax", "ymin", "ymax"]:
+        assert len(df[edge].unique()) == h
 
-    assert len(df["xmin"].unique()) == h
-    assert len(df["xmax"].unique()) == h
-    assert len(df["ymin"].unique()) == h
-    assert len(df["ymax"].unique()) == h
+    # Higher dimensions too
+    q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs_higher_dim(
+        seed=3
+    )
+    xmin, xmax, ymin, ymax, zmin, zmax, h = -7.0, 5.0, 2.0, 11.0, -1, 3, 7
+
+    df = prob_over_grid(
+        q_data,
+        prior_data,
+        q_prior_data,
+        bin_edges,
+        grid_mins=np.array([xmin, ymin, zmin]),
+        grid_maxes=np.array([xmax, ymax, zmax]),
+        h=h,
+    )
+
+    for edge in ["xmin", "xmax", "ymin", "ymax", "zmin", "zmax"]:
+        assert len(df[edge].unique()) == h
 
 
 def test_grid_edges_are_contiguous():
@@ -203,6 +398,34 @@ def test_grid_edges_are_contiguous():
     assert np.allclose(xmins[1:], xmaxs[:-1])
     assert np.allclose(ymins[1:], ymaxs[:-1])
 
+    # In higher dimensions
+
+    q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs_higher_dim(
+        seed=3
+    )
+    xmin, xmax, ymin, ymax, zmin, zmax, h = -7.0, 5.0, 2.0, 11.0, 0, 3, 7
+
+    df = prob_over_grid(
+        q_data,
+        prior_data,
+        q_prior_data,
+        bin_edges,
+        grid_mins=np.array([xmin, ymin, zmin]),
+        grid_maxes=np.array([xmax, ymax, zmax]),
+        h=h,
+    )
+
+    xmins = np.sort(df["xmin"].unique())
+    xmaxs = np.sort(df["xmax"].unique())
+    ymins = np.sort(df["ymin"].unique())
+    ymaxs = np.sort(df["ymax"].unique())
+    zmins = np.sort(df["zmin"].unique())
+    zmaxs = np.sort(df["zmax"].unique())
+
+    assert np.allclose(xmins[1:], xmaxs[:-1])
+    assert np.allclose(ymins[1:], ymaxs[:-1])
+    assert np.allclose(zmins[1:], zmaxs[:-1])
+
 
 def test_grid_edges_have_uniform_spacing():
     """Grid edges are evenly spaced along x and y."""
@@ -227,6 +450,34 @@ def test_grid_edges_have_uniform_spacing():
 
     assert np.allclose(np.diff(xmins), dx)
     assert np.allclose(np.diff(ymins), dy)
+
+    # Higher dimensions
+    q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs_higher_dim(
+        seed=3
+    )
+    xmin, xmax, ymin, ymax, zmin, zmax, h = -7.0, 5.0, 2.0, 11.0, 0, 3, 7
+
+    df = prob_over_grid(
+        q_data,
+        prior_data,
+        q_prior_data,
+        bin_edges,
+        grid_mins=np.array([xmin, ymin, zmin]),
+        grid_maxes=np.array([xmax, ymax, zmax]),
+        h=h,
+    )
+
+    xmins = np.sort(df["xmin"].unique())
+    ymins = np.sort(df["ymin"].unique())
+    zmins = np.sort(df["zmin"].unique())
+
+    dx = (xmax - xmin) / h
+    dy = (ymax - ymin) / h
+    dz = (zmax - zmin) / h
+
+    assert np.allclose(np.diff(xmins), dx)
+    assert np.allclose(np.diff(ymins), dy)
+    assert np.allclose(np.diff(zmins), dz)
 
 
 def test_tiles_have_constant_positive_dimensions():
@@ -254,6 +505,38 @@ def test_tiles_have_constant_positive_dimensions():
     assert np.allclose(heights, dy)
     assert np.all(widths > 0)
     assert np.all(heights > 0)
+
+    # Higher dim
+    q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs_higher_dim(
+        seed=4
+    )
+    xmin, xmax, ymin, ymax, zmin, zmax, h = -3.5, 4.5, -10.0, -2.0, 0, 2, 4
+
+    df = prob_over_grid(
+        q_data,
+        prior_data,
+        q_prior_data,
+        bin_edges,
+        grid_mins=np.array([xmin, ymin, zmin]),
+        grid_maxes=np.array([xmax, ymax, zmax]),
+        h=h,
+    )
+
+    dx = (xmax - xmin) / h
+    dy = (ymax - ymin) / h
+    dz = (zmax - zmin) / h
+
+    widths = (df["xmax"] - df["xmin"]).to_numpy()
+    heights = (df["ymax"] - df["ymin"]).to_numpy()
+    depths = (df["zmax"] - df["zmin"]).to_numpy()
+
+    assert np.allclose(widths, dx)
+    assert np.allclose(heights, dy)
+    assert np.allclose(depths, dz)
+
+    assert np.all(widths > 0)
+    assert np.all(heights > 0)
+    assert np.all(depths > 0)
 
 
 def test_columns_and_types():
@@ -303,7 +586,11 @@ def test_h_one_prob_is_one_many_random_cases():
 def test_probs_sum_to_one_many_random_cases():
     """Sum of all probabilities is 1 across many seeds/boxes/h, for prior having subset of Lambda support."""
 
-    boxes = [(0.0, 1.0, 0.0, 1.0), (-0.5, 1.5, -0.5, 1.5), (0.0, 10.0, 0.0, 10.0)]
+    boxes = [
+        (0.0, 1.0, 0.0, 1.0),
+        (-0.5, 1.5, -0.5, 1.5),
+        (0.0, 10.0, 0.0, 10.0),
+    ]
     for seed in [0, 1, 2, 11]:
         for M_obs, N_prior in [(200, 500), (1000, 2000), (2000, 5000)]:
             q_data, prior_data, q_prior_data, bin_edges = make_dummy_inputs(
@@ -320,7 +607,9 @@ def test_probs_sum_to_one_many_random_cases():
                         grid_maxes=np.array([xmax, ymax]),
                         h=h,
                     )
-                    assert np.isclose(df["prob"].sum(), 1.0, rtol=1e-9, atol=1e-9)
+                    assert np.isclose(
+                        df["prob"].sum(), 1.0, rtol=1e-9, atol=1e-9
+                    )
 
 
 def test_prob_mass_is_assigned_to_correct_x_column():
