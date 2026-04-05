@@ -113,6 +113,10 @@ def test_counts_observed_empty_list_returns_zeros():
     counts = counts_observed(np.array([]), bin_edges)
     assert np.allclose(counts, np.zeros((3,)))
 
+    # Also try a (N, 1) shaped array, not just (N, )
+    counts = counts_observed(np.array([]), bin_edges)
+    assert np.allclose(counts, np.zeros((3, 1)))
+
 
 def test_counts_observed_empty_list_returns_zeros_higher_dim():
     """Higher dim: Empty input gives all 0 counts."""
