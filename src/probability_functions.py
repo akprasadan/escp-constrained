@@ -112,8 +112,7 @@ def prob_A(
 
     # If no lambda_is are in any of the bins, the probability is 0
     if not np.any(mask):
-        return 0.0
-
+        return 0
     prob = np.sum(
         (prior_A_counts[mask] / prior_counts[mask]) * (obs_counts[mask] / K)
     )

@@ -41,6 +41,16 @@ def test_rect_A_one_dim():
     expected = np.array([1, 0, 0, 1, 1, 1, 0, 0, 0])
     assert np.allclose(expected, mask)
 
+    # Dense grid inside
+    points = np.linspace(0, 0.99, 100)[:, None]
+    mask = simple_segment(points)
+    assert np.all(mask)
+
+    # All points outside. Note 1 is not included.
+    points = np.array([-1, -0.5, -0.01, 1, 1.1, 2, 50])[:, None]
+    mask = simple_segment(points)
+    assert np.all(~mask)
+
 
 def test_rect_A_interior_membership_square():
     """Points strictly inside the square are selected (no boundary points)."""
@@ -259,44 +269,32 @@ def test_rect_A_no_points_selected_3d():
 def test_rect_A_raises_when_bounds_invalid():
     """Invalid bounds raise ValueError. Tests 1D, 2D or 3D examples."""
     # Min and max values of incorrect length
-    with pytest.raises(ValueError, match="Incompatible lengths"):
-        rect_A(np.array([0]), np.array([1, 1]))
 
-    with pytest.raises(ValueError, match="Incompatible lengths"):
-        rect_A(np.array([0, 0]), np.array([1, 1, 1]))
+    incompatible_cases = [
+        (np.array([]), np.array([1])),
+        (np.array([0]), np.array([1, 1])),
+        (np.array([1, 1]), np.array([0])),
+        (np.array([0, 0]), np.array([1, 1, 1])),
+        (np.array([0, 0, 0]), np.array([1, 1])),
+    ]
 
-    with pytest.raises(ValueError, match="Incompatible lengths"):
-        rect_A(np.array([0, 0, 0]), np.array([1, 1]))
+    for arr1, arr2 in incompatible_cases:
+        with pytest.raises(ValueError, match="Incompatible lengths"):
+            rect_A(arr1, arr2)
 
-    with pytest.raises(ValueError, match="Incompatible lengths"):
-        rect_A(np.array([0]), np.array([1, 1]))
+    non_monotonic_cases = [
+        (np.array([1]), np.array([1])),  # Bad x-value in 1D
+        (np.array([2]), np.array([1])),
+        (np.array([1, 0]), np.array([1, 1])),  # Bad x-value in 2D
+        (np.array([2, 0]), np.array([1, 1])),
+        (np.array([0, 1]), np.array([1, 1])),  # Bad y-value in 2D
+        (np.array([0, 2]), np.array([1, 1])),
+        (np.array([1, 0, 0]), np.array([1, 1, 1])),  # Bad x-value in 3D
+        (np.array([2, 0, 0]), np.array([1, 1, 1])),
+        (np.array([0, 0, 1]), np.array([1, 1, 1])),  # Bad z-value in 3D
+        (np.array([0, 0, 2]), np.array([1, 1, 1])),
+    ]
 
-    # Bad x-value in 1D
-    with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        rect_A(np.array([1]), np.array([1]))  # xmin == xmax
-    with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        rect_A(np.array([2]), np.array([1]))  # xmin > xmax
-
-    # Bad x-value in 2D
-    with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        rect_A(np.array([1, 0]), np.array([1, 1]))  # xmin == xmax
-    with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        rect_A(np.array([2, 0]), np.array([1, 1]))  # xmin > xmax
-
-    # Bad y-value in 2D
-    with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        rect_A(np.array([0, 1]), np.array([1, 1]))  # ymin == ymax
-    with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        rect_A(np.array([0, 2]), np.array([1, 1]))  # ymin > ymax
-
-    # Bad x-value in 3D
-    with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        rect_A(np.array([1, 0, 0]), np.array([1, 1, 1]))  # xmin == xmax
-    with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        rect_A(np.array([2, 0, 0]), np.array([1, 1, 1]))  # xmin > xmax
-
-    # Bad z-value in 3D
-    with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        rect_A(np.array([0, 0, 1]), np.array([1, 1, 1]))  # zmin == zmax
-    with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        rect_A(np.array([0, 0, 2]), np.array([1, 1, 1]))  # zmin > zmax
+    for arr1, arr2 in non_monotonic_cases:
+        with pytest.raises(ValueError, match="min_vals >= max_vals"):
+            rect_A(arr1, arr2)

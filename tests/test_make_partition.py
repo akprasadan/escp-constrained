@@ -44,7 +44,7 @@ def test_make_partition_basic_higher_dim():
 
 def test_make_partition_equal_width():
     """Edges match np.linspace for a simple interval."""
-    min_vals, max_vals = np.array([0.0]), np.array([10.0])
+    min_vals, max_vals = np.array([0]), np.array([10])
     M = 5
     edges = make_partition(min_vals, max_vals, M)
     expected = np.linspace(min_vals, max_vals, M + 1)
@@ -91,20 +91,20 @@ def test_make_partition_with_minmax_from_unsorted_input_higher_dim():
 
 def test_make_partition_single_bin():
     """M=1 yields exactly two edges: [min_vals, max_vals]."""
-    min_vals, max_vals = np.array([1.0]), np.array([5.0])
+    min_vals, max_vals = np.array([1]), np.array([5])
     M = 1
     edges = make_partition(min_vals, max_vals, M)
     assert edges.shape == (2, 1)
-    assert np.allclose(edges, np.array([[1.0], [5.0]]))
+    assert np.allclose(edges, np.array([[1], [5]]))
 
 
 def test_make_partition_single_bin_higher_dim():
     """Higher dim: M=1 yields exactly two edges: [min_vals[i], max_vals[i]] in each dimension."""
-    min_vals, max_vals = np.array([1.0, 0.0]), np.array([5.0, 10.0])
+    min_vals, max_vals = np.array([1, 0]), np.array([5, 10])
     M = 1
     edges = make_partition(min_vals, max_vals, M)
     assert edges.shape == (2, 2)
-    assert np.allclose(edges, np.array([[1.0, 0.0], [5.0, 10.0]]))
+    assert np.allclose(edges, np.array([[1, 0], [5, 10]]))
 
 
 def test_make_partition_widths_sum_to_range():
@@ -121,43 +121,43 @@ def test_make_partition_widths_sum_to_range():
 def test_make_partition_raises_when_min_not_less_than_max_equal():
     """Raises when min_vals == max_vals."""
     with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        make_partition(np.array([1.0]), np.array([1.0]), 3)
+        make_partition(np.array([1]), np.array([1]), 3)
 
 
 def test_make_partition_raises_when_min_not_less_than_max_equal_higher_dim():
     """Raises when min_vals == max_vals."""
     with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        make_partition(np.array([1.0, 2.0]), np.array([1.0, 3.0]), 3)
+        make_partition(np.array([1, 2]), np.array([1, 3]), 3)
 
     # Same thing but swap components with error
     with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        make_partition(np.array([1.0, 2.0]), np.array([2.0, 2.0]), 3)
+        make_partition(np.array([1, 2]), np.array([2, 2]), 3)
 
 
 def test_make_partition_raises_when_min_not_less_than_max_reversed():
     """Raises when min_vals > max_vals."""
     with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        make_partition(np.array([5.0]), np.array([1.0]), 3)
+        make_partition(np.array([5]), np.array([1]), 3)
 
 
 def test_make_partition_raises_when_min_not_less_than_max_reversed_higher_dim():
     """Raises when min_vals > max_vals."""
     with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        make_partition(np.array([5.0, 7.0]), np.array([1.0, 8.0]), 3)
+        make_partition(np.array([5, 7]), np.array([1, 8]), 3)
 
     # Same thing but swap which component draws the error
     with pytest.raises(ValueError, match="min_vals >= max_vals"):
-        make_partition(np.array([5.0, 7.0]), np.array([7.0, 6.0]), 5)
+        make_partition(np.array([5, 7]), np.array([7, 6]), 5)
 
 
 def test_make_partition_raises_when_M_less_than_1():
     """Raises when M < 1."""
     with pytest.raises(ValueError, match="must be an integer >= 1"):
-        make_partition(np.array([0.0]), np.array([1.0]), 0)
+        make_partition(np.array([0]), np.array([1]), 0)
 
 
 def test_make_partition_raises_when_M_not_int():
     """Raises when M is not an integer."""
     with pytest.raises(ValueError, match="must be an integer >= 1"):
         # Use cast to pretend 0.5 is an integer, otherwise type checker will flag warning
-        make_partition(np.array([0.0]), np.array([1.0]), cast(int, 0.5))
+        make_partition(np.array([0]), np.array([1]), cast(int, 0.5))

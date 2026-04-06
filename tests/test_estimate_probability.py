@@ -1,6 +1,8 @@
 """
 Unit tests for `probability_functions.prob_A()`.
 
+Note that the input arrays of counts correspond to bins in D space. We test 1D and 2D examples.
+
 Tests:
 - Correct computation for mixed bins
 - Skipping bins with zero prior counts
@@ -86,7 +88,7 @@ def test_prob_A_skips_zero_nc_higher_dim():
 
 
 def test_prob_A_all_in_A_equals_sum_weights():
-    """If prior_A_counts == prior_counts for all bins, estimate equals sum(obs_counts)/K = 1.0.
+    """If prior_A_counts == prior_counts for all bins, estimate equals sum(obs_counts)/K = 1.
     Assumes every prior_count is non-zero."""
     prior_counts = np.array([3, 2])
     prior_A_counts = np.array([3, 2])
@@ -142,7 +144,7 @@ def test_prob_A_none_in_A_zero():
     prior_A_counts = np.array([0, 0, 0])
     obs_counts = np.array([2, 3, 5])
     est = prob_A(prior_counts, prior_A_counts, obs_counts, K=10)
-    assert est == 0.0
+    assert est == 0
 
 
 def test_prob_A_none_in_A_zero_higher_dim():
@@ -267,7 +269,7 @@ def test_prob_A_in_unit_interval_randomized():
     K = int(obs_counts.sum())
 
     p = prob_A(prior_counts, prior_A_counts, obs_counts, K)
-    assert 0.0 <= p <= 1.0
+    assert 0 <= p <= 1
 
 
 def test_prob_A_in_unit_interval_randomized_higher_dim():
@@ -282,4 +284,4 @@ def test_prob_A_in_unit_interval_randomized_higher_dim():
     K = int(obs_counts.sum())
 
     p = prob_A(prior_counts, prior_A_counts, obs_counts, K)
-    assert 0.0 <= p <= 1.0
+    assert 0 <= p <= 1

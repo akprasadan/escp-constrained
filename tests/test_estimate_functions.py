@@ -43,26 +43,26 @@ FIXED_SCP_PARAMS: EstimationParams = {
 
 
 def gaussian_tgd(rng, J):
-    x = rng.normal(2.0, 2, size=J)
-    y = rng.normal(-1.0, 1, size=J)
+    x = rng.normal(2, 2, size=J)
+    y = rng.normal(-1, 1, size=J)
     return np.column_stack((x, y))
 
 
 def gaussian_tgd_huge_variance(rng, J):
-    x = rng.normal(5.0, 10, size=J)
-    y = rng.normal(-5.0, 10, size=J)
+    x = rng.normal(5, 10, size=J)
+    y = rng.normal(-5, 10, size=J)
     return np.column_stack((x, y))
 
 
 def uniform_prior(rng, J):
-    x = rng.uniform(-5.0, 5.0, size=J)
-    y = rng.uniform(-5.0, 5.0, size=J)
+    x = rng.uniform(-5, 5, size=J)
+    y = rng.uniform(-5, 5, size=J)
     return np.column_stack((x, y))
 
 
 def huge_uniform_prior(rng, J):
-    x = rng.uniform(-20.0, 20.0, size=J)
-    y = rng.uniform(-20.0, 20.0, size=J)
+    x = rng.uniform(-20, 20, size=J)
+    y = rng.uniform(-20, 20, size=J)
     return np.column_stack((x, y))
 
 
@@ -149,20 +149,20 @@ def test_estimated_probs_df_prob_sums_to_one():
     and the accompanying empirical versions of these."""
 
     # Experiment 1(A) and 1(B)
-    assert np.isclose(probs_df["prob"].sum(), 1.0)
-    assert np.isclose(probs_df_emp["prob"].sum(), 1.0)
+    assert np.isclose(probs_df["prob"].sum(), 1)
+    assert np.isclose(probs_df_emp["prob"].sum(), 1)
 
     # 2(A) and 2(B)
-    assert np.isclose(probs_df_reg_tgd_huge_pr["prob"].sum(), 1.0)
-    assert np.isclose(probs_df_reg_tgd_huge_pr_emp["prob"].sum(), 1.0)
+    assert np.isclose(probs_df_reg_tgd_huge_pr["prob"].sum(), 1)
+    assert np.isclose(probs_df_reg_tgd_huge_pr_emp["prob"].sum(), 1)
 
     # 3(A) and 3(B)
-    assert np.isclose(probs_df_huge_tgd_reg_pr["prob"].sum(), 1.0)
-    assert np.isclose(probs_df_huge_tgd_reg_pr_emp["prob"].sum(), 1.0)
+    assert np.isclose(probs_df_huge_tgd_reg_pr["prob"].sum(), 1)
+    assert np.isclose(probs_df_huge_tgd_reg_pr_emp["prob"].sum(), 1)
 
     # 4(A) and 4(B)
-    assert np.isclose(probs_df_huge_tgd_huge_pr["prob"].sum(), 1.0)
-    assert np.isclose(probs_df_huge_tgd_huge_pr_emp["prob"].sum(), 1.0)
+    assert np.isclose(probs_df_huge_tgd_huge_pr["prob"].sum(), 1)
+    assert np.isclose(probs_df_huge_tgd_huge_pr_emp["prob"].sum(), 1)
 
 
 def test_prior_df_structure():

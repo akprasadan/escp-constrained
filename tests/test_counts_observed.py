@@ -11,7 +11,6 @@ Tests:
 """
 
 import numpy as np
-import pytest
 
 from src.output_functions import counts_observed as counts_observed
 
@@ -26,10 +25,17 @@ def test_counts_observed_basic():
 
 def test_counts_observed_higher_dim_on_diagonal():
     """Higher dim: Values are counted into bins correctly if placed along diagonal
-    from (0, 5) to (6, 20). Test each diagonal element one at a time, then together."""
-    bottom_left = np.array([[0, 5], [0, 9.9], [1, 5], [1, 6]])  # Bottom left, 4x
-    center = np.array([[2, 10], [2, 14.9], [3, 12], [3.9, 14.9], [3.9, 10]])  # Middle, 5x
-    top_right = np.array([[4, 15], [4, 20], [5, 17], [5, 20], [6, 15], [6, 20]])  # Top right, 6x
+    from (0, 5) to (6, 20). Test each diagonal element one at a time, then together.
+    """
+    bottom_left = np.array(
+        [[0, 5], [0, 9.9], [1, 5], [1, 6]]
+    )  # Bottom left, 4x
+    center = np.array(
+        [[2, 10], [2, 14.9], [3, 12], [3.9, 14.9], [3.9, 10]]
+    )  # Middle, 5x
+    top_right = np.array(
+        [[4, 15], [4, 20], [5, 17], [5, 20], [6, 15], [6, 20]]
+    )  # Top right, 6x
 
     # Create 3 x 3 grid of bins
     # bins: [0, 2) x [5, 10), [0, 2) x [5, 10), [0, 2) x [5, 10]

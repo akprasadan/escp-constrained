@@ -23,8 +23,8 @@ def uniform_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
 
 def gaussian_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
     """Non-centered, elliptical Gaussian distribution."""
-    x = rng.normal(loc=2.0, scale=0.5, size=n)
-    y = rng.normal(loc=-1.0, scale=2.0, size=n)
+    x = rng.normal(loc=2, scale=0.5, size=n)
+    y = rng.normal(loc=-1, scale=2, size=n)
     return np.column_stack([x, y])
 
 
@@ -53,14 +53,14 @@ def test_uniform_sampler_range():
     """Uniform sampler should have points in the unit square"""
     for n in n_list:
         pts = sample_distr(n=n, seed=0, distr=uniform_sampler)
-        assert np.all(pts >= 0.0) and np.all(pts <= 1.0)
+        assert np.all(pts >= 0) and np.all(pts <= 1)
 
 
 def test_gaussian_and_deterministic_samplers_not_confined_to_01():
     """Gaussian and constant sampler produces array with values can outside [0,1]."""
     for n, distr in product(n_list, [gaussian_sampler, constant_sampler]):
         pts = sample_distr(n=n, seed=2, distr=distr)
-        assert np.any((pts < 0.0) | (pts > 1.0))
+        assert np.any((pts < 0) | (pts > 1))
 
 
 def test_non_constant_reproducibility_same_seed_or_different():
