@@ -74,39 +74,61 @@ probs_df, prior_df, tgd_df = synthetic_scp(
     K=10000, tgd=gaussian_tgd, prior=uniform_prior, **FIXED_SCP_PARAMS
 )
 
+
 # 1(B) Empirical: Regular TGD, regular prior
 probs_df_emp, prior_df_emp = empirical_scp(
-    q_data=tgd_df["q"].to_numpy(), prior=uniform_prior, **FIXED_SCP_PARAMS
+    q_data=tgd_df["q_x"].to_numpy(), prior=uniform_prior, **FIXED_SCP_PARAMS
 )
 
+
 # 2(A) Synthetic with regular TGD, huge prior
-probs_df_reg_tgd_huge_pr, prior_df_reg_tgd_huge_pr, tgd_df_reg_tgd_huge_pr = synthetic_scp(
-    K=10000, tgd=gaussian_tgd, prior=huge_uniform_prior, **FIXED_SCP_PARAMS
+probs_df_reg_tgd_huge_pr, prior_df_reg_tgd_huge_pr, tgd_df_reg_tgd_huge_pr = (
+    synthetic_scp(
+        K=10000, tgd=gaussian_tgd, prior=huge_uniform_prior, **FIXED_SCP_PARAMS
+    )
 )
 
 # 2(B) Empirical with regular TGD, huge prior
 probs_df_reg_tgd_huge_pr_emp, prior_df_reg_tgd_huge_pr_emp = empirical_scp(
-    q_data=tgd_df_reg_tgd_huge_pr["q"].to_numpy(), prior=huge_uniform_prior, **FIXED_SCP_PARAMS
+    q_data=tgd_df_reg_tgd_huge_pr["q_x"].to_numpy(),
+    prior=huge_uniform_prior,
+    **FIXED_SCP_PARAMS
 )
 
 # 3(A) Synthetic with huge TGD, regular prior
-probs_df_huge_tgd_reg_pr, prior_df_huge_tgd_reg_pr, tgd_df_huge_tgd_reg_pr = synthetic_scp(
-    K=10000, tgd=gaussian_tgd_huge_variance, prior=uniform_prior, **FIXED_SCP_PARAMS
+probs_df_huge_tgd_reg_pr, prior_df_huge_tgd_reg_pr, tgd_df_huge_tgd_reg_pr = (
+    synthetic_scp(
+        K=10000,
+        tgd=gaussian_tgd_huge_variance,
+        prior=uniform_prior,
+        **FIXED_SCP_PARAMS
+    )
 )
 
 # 3(B) Empirical with huge TGD, regular prior
 probs_df_huge_tgd_reg_pr_emp, prior_df_huge_tgd_reg_pr_emp = empirical_scp(
-    q_data=tgd_df_huge_tgd_reg_pr["q"].to_numpy(), prior=uniform_prior, **FIXED_SCP_PARAMS
+    q_data=tgd_df_huge_tgd_reg_pr["q_x"].to_numpy(),
+    prior=uniform_prior,
+    **FIXED_SCP_PARAMS
 )
 
 # 4(A) Synthetic with huge TGD, huge prior
-probs_df_huge_tgd_huge_pr, prior_df_huge_tgd_huge_pr, tgd_df_huge_tgd_huge_pr = synthetic_scp(
-    K=10000, tgd=gaussian_tgd_huge_variance, prior=huge_uniform_prior, **FIXED_SCP_PARAMS
+(
+    probs_df_huge_tgd_huge_pr,
+    prior_df_huge_tgd_huge_pr,
+    tgd_df_huge_tgd_huge_pr,
+) = synthetic_scp(
+    K=10000,
+    tgd=gaussian_tgd_huge_variance,
+    prior=huge_uniform_prior,
+    **FIXED_SCP_PARAMS
 )
 
 # 4(B) Empirical with huge TGD, huge prior
 probs_df_huge_tgd_huge_pr_emp, prior_df_huge_tgd_huge_pr_emp = empirical_scp(
-    q_data=tgd_df_huge_tgd_huge_pr["q"].to_numpy(), prior=huge_uniform_prior, **FIXED_SCP_PARAMS
+    q_data=tgd_df_huge_tgd_huge_pr["q_x"].to_numpy(),
+    prior=huge_uniform_prior,
+    **FIXED_SCP_PARAMS
 )
 
 
@@ -146,28 +168,28 @@ def test_estimated_probs_df_prob_sums_to_one():
 def test_prior_df_structure():
     "Validate prior_df output."
     assert isinstance(prior_df, pd.DataFrame)
-    assert set(prior_df.columns) == {"source", "x", "y", "q"}
+    assert set(prior_df.columns) == {"source", "x", "y", "q_x"}
     assert (prior_df["source"] == "prior").all()
 
 
 def test_tgd_df_structure():
     "Validate tgd_df output."
     assert isinstance(tgd_df, pd.DataFrame)
-    assert set(tgd_df.columns) == {"source", "x", "y", "q"}
+    assert set(tgd_df.columns) == {"source", "x", "y", "q_x"}
     assert (tgd_df["source"] == "tgd").all()
 
 
 def test_prior_df_q_matches_quadratic():
     "Check that prior_df correctly saved values of Q from x and y"
     Q = prior_df["x"] ** 2 + 3 * prior_df["y"] ** 2
-    q_vals = prior_df["q"].apply(lambda num: num[0])
+    q_vals = prior_df["q_x"]
     assert np.allclose(Q.to_numpy(), q_vals)
 
 
 def test_tgd_df_q_matches_quadratic():
     "Check that tgd_df correctly saved values of Q from x and y"
     Q = tgd_df["x"] ** 2 + 3 * tgd_df["y"] ** 2
-    q_vals = tgd_df["q"].apply(lambda num: num[0])
+    q_vals = tgd_df["q_x"]
     assert np.allclose(Q.to_numpy(), q_vals)
 
 
@@ -178,13 +200,29 @@ def test_synthetic_and_empirical_match():
     assert_frame_equal(prior_df, prior_df_emp, check_exact=True)
 
     # Compare 2(A) and 2(B)
-    assert_frame_equal(probs_df_reg_tgd_huge_pr, probs_df_reg_tgd_huge_pr_emp, check_exact=True)
-    assert_frame_equal(prior_df_reg_tgd_huge_pr, prior_df_reg_tgd_huge_pr_emp, check_exact=True)
+    assert_frame_equal(
+        probs_df_reg_tgd_huge_pr, probs_df_reg_tgd_huge_pr_emp, check_exact=True
+    )
+    assert_frame_equal(
+        prior_df_reg_tgd_huge_pr, prior_df_reg_tgd_huge_pr_emp, check_exact=True
+    )
 
     # Compare 3(A) and 3(B)
-    assert_frame_equal(probs_df_huge_tgd_reg_pr, probs_df_huge_tgd_reg_pr_emp, check_exact=True)
-    assert_frame_equal(prior_df_huge_tgd_reg_pr, prior_df_huge_tgd_reg_pr_emp, check_exact=True)
+    assert_frame_equal(
+        probs_df_huge_tgd_reg_pr, probs_df_huge_tgd_reg_pr_emp, check_exact=True
+    )
+    assert_frame_equal(
+        prior_df_huge_tgd_reg_pr, prior_df_huge_tgd_reg_pr_emp, check_exact=True
+    )
 
     # Compare 4(A) and 4(B)
-    assert_frame_equal(probs_df_huge_tgd_huge_pr, probs_df_huge_tgd_huge_pr_emp, check_exact=True)
-    assert_frame_equal(prior_df_huge_tgd_huge_pr, prior_df_huge_tgd_huge_pr_emp, check_exact=True)
+    assert_frame_equal(
+        probs_df_huge_tgd_huge_pr,
+        probs_df_huge_tgd_huge_pr_emp,
+        check_exact=True,
+    )
+    assert_frame_equal(
+        prior_df_huge_tgd_huge_pr,
+        prior_df_huge_tgd_huge_pr_emp,
+        check_exact=True,
+    )

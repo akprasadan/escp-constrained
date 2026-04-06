@@ -114,7 +114,6 @@ def prob_A(
     if not np.any(mask):
         return 0.0
 
-    # print(prior_A_counts[mask] == prior_counts[mask])
     prob = np.sum(
         (prior_A_counts[mask] / prior_counts[mask]) * (obs_counts[mask] / K)
     )

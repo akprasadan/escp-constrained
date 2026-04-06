@@ -21,10 +21,13 @@ def check_lambda_bounds(min_vals: np.ndarray, max_vals: np.ndarray) -> None:
     --------
     ValueError : If bounds are invalid.
     """
+
     d = len(min_vals)
 
     if d != len(max_vals):
-        raise ValueError("Incompatible lengths (dimension) for min_vals and max_vals.")
+        raise ValueError(
+            "Incompatible lengths (dimension) for min_vals and max_vals."
+        )
 
     for i in range(d):
         if not (min_vals[i] < max_vals[i]):
@@ -67,7 +70,9 @@ def mask_in_A(
     return A(points)
 
 
-def rect_A(mins: np.ndarray, maxes: np.ndarray) -> Callable[[np.ndarray], np.ndarray]:
+def rect_A(
+    mins: np.ndarray, maxes: np.ndarray
+) -> Callable[[np.ndarray], np.ndarray]:
     """
     Produce d-dimensional rectangular mask with half-open bounds:
     A = [x1_min, x1_max) x [x2_min, x2_max) x ... x [xd_min, xd_max]
@@ -90,6 +95,8 @@ def rect_A(mins: np.ndarray, maxes: np.ndarray) -> Callable[[np.ndarray], np.nda
     check_lambda_bounds(mins, maxes)
 
     def _A(points: np.ndarray) -> np.ndarray:
-        return np.all((points >= mins) & (points < maxes), axis=1)
+        # Make sure (N, ) points are treated as (N, 1)
+        points_new = points[:, None] if points.ndim == 1 else points
+        return np.all((points_new >= mins) & (points_new < maxes), axis=1)
 
     return _A

@@ -23,6 +23,19 @@ from src.box_functions import rect_A as rect_A
 from src.box_functions import check_lambda_bounds as check_lambda_bounds
 
 
+def simplify_low_dimensional_dataframes(
+    df, dim: int, column: str, axis_names: list[str]
+) -> pd.DataFrame:
+
+    if dim > 3:
+        return df
+    needed_axis_names = axis_names[:dim]
+    df[needed_axis_names] = df[column].to_list()
+    df = df.drop(columns=column)
+
+    return df
+
+
 def synthetic_scp(
     K: int,
     J: int,
@@ -119,11 +132,35 @@ def synthetic_scp(
     probs_df["prob"] /= probs_df["prob"].sum()
 
     # 5) Package prior and TGD samples with respective Q evaluations into dataframes
+    # TODO: Correct for higher dimensions
     prior_df = pd.DataFrame(
-        {"source": "prior", "x": prior_data[:, 0], "y": prior_data[:, 1], "q": list(q_prior_data)}
+        {
+            "source": "prior",
+            "lambda": list(prior_data),
+            "q": list(q_prior_data),
+        }
     )
+    input_dim = prior_data.shape[1]
+    output_dim = q_prior_data.shape[1]
+    prior_df = simplify_low_dimensional_dataframes(
+        prior_df, input_dim, "lambda", ["x", "y", "z"]
+    )
+    prior_df = simplify_low_dimensional_dataframes(
+        prior_df, output_dim, "q", ["q_x", "q_y", "q_z"]
+    )
+
     tgd_df = pd.DataFrame(
-        {"source": "tgd", "x": tgd_data[:, 0], "y": tgd_data[:, 1], "q": list(q_data)}
+        {
+            "source": "tgd",
+            "lambda": list(tgd_data),
+            "q": list(q_data),
+        }
+    )
+    tgd_df = simplify_low_dimensional_dataframes(
+        tgd_df, input_dim, "lambda", ["x", "y", "z"]
+    )
+    tgd_df = simplify_low_dimensional_dataframes(
+        tgd_df, output_dim, "q", ["q_x", "q_y", "q_z"]
     )
 
     return probs_df, prior_df, tgd_df
@@ -217,10 +254,17 @@ def empirical_scp(
     prior_df = pd.DataFrame(
         {
             "source": "prior",
-            "x": prior_data[:, 0],
-            "y": prior_data[:, 1],
+            "lambda": list(prior_data),
             "q": list(q_prior_data),
         }
+    )
+    input_dim = prior_data.shape[1]
+    output_dim = q_prior_data.shape[1]
+    prior_df = simplify_low_dimensional_dataframes(
+        prior_df, input_dim, "lambda", ["x", "y", "z"]
+    )
+    prior_df = simplify_low_dimensional_dataframes(
+        prior_df, output_dim, "q", ["q_x", "q_y", "q_z"]
     )
 
     return probs_df, prior_df

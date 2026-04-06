@@ -15,6 +15,10 @@ import pytest
 from src.output_functions import apply_map as apply_map
 
 
+def Q_scale(x):
+    return 3 * x
+
+
 def Q_add(x, y):
     return x + y
 
@@ -27,11 +31,19 @@ def squared_distance(x, y):
     return x**2 + y**2
 
 
+def test_apply_map_one_D():
+    points = np.array([-2, 0, 1, 4])
+    q_vals = apply_map(points, Q_scale)
+    expected = np.array([-6, 0, 3, 12])[:, None]
+    assert q_vals.shape == (4, 1)
+    assert np.allclose(q_vals, expected)
+
+
 def test_apply_map_basic():
     """Computes Q(x,y)=x^2+y^2 for three points; checks shape and values."""
     points = np.array([[0, 0], [1, 2], [3, 4]])
     q_vals = apply_map(points, squared_distance)
-    expected = np.array([[0], [5], [25]])
+    expected = np.array([0, 5, 25])[:, None]
     assert q_vals.shape == (3, 1)
     assert np.allclose(q_vals, expected)
 
@@ -47,7 +59,9 @@ def test_apply_map_3_to_2_dim_q():
 
 def test_apply_map_3_to_2_dim_q_again():
     """Computes Q(x,y,z)=(2x+5y-z, z); checks shape and values."""
-    points = np.array([[0.0, 1.0, 2.0], [2.0, 3.0, 4.0], [4.0, -5.0, 1.0], [-1.0, 0.5, 0]])
+    points = np.array(
+        [[0.0, 1.0, 2.0], [2.0, 3.0, 4.0], [4.0, -5.0, 1.0], [-1.0, 0.5, 0]]
+    )
 
     def Q(x, y, z):
         return [2.0 * x + 5.0 * y - z, z]
@@ -61,7 +75,9 @@ def test_apply_map_3_to_2_dim_q_again():
 
 def test_apply_map_3_to_2_dim_q_again_swapped_output():
     """Q(x,y,z)=(2x+5y-z, z) but with swapped output components."""
-    points = np.array([[0.0, 1.0, 2.0], [2.0, 3.0, 4.0], [4.0, -5.0, 1.0], [-1.0, 0.5, 0]])
+    points = np.array(
+        [[0.0, 1.0, 2.0], [2.0, 3.0, 4.0], [4.0, -5.0, 1.0], [-1.0, 0.5, 0]]
+    )
 
     def Q(x, y, z):
         return [z, 2.0 * x + 5.0 * y - z]

@@ -1,5 +1,6 @@
 """
-Unit tests for `rect_A()` (half-open rectangles [xmin, xmax) x [ymin, ymax)).
+Unit tests for `rect_A()` (half-open boxes [xmin, xmax) x [ymin, ymax) x... of any
+dimension, including 1).
 
 Tests:
 - Interior vs. exterior point membership
@@ -17,6 +18,8 @@ from itertools import product
 from src.box_functions import rect_A as rect_A
 
 
+# [0, 1)
+simple_segment = rect_A(np.array([0]), np.array([1]))
 # [0, 1) x [0, 1)
 simple_square = rect_A(np.array([0, 0]), np.array([1, 1]))
 # [0, 5) x [0, 1)
@@ -25,6 +28,18 @@ simple_rectangle = rect_A(np.array([0, 0]), np.array([5, 1]))
 simple_cube = rect_A(np.array([0, 0, 0]), np.array([1, 1, 1]))
 # [0, 1) x [0, 5) x [0, 1)
 simple_box = rect_A(np.array([0, 0, 0]), np.array([1, 5, 1]))
+
+
+def test_rect_A_one_dim():
+    """Simple checks for one-D inputs."""
+    # Make sure (N, ) points are of shape (N, 1)
+    points = np.array([0.5, -10, -0.1, 0, 0.5, 0.99, 1, 1.2, 20])[:, None]
+    mask = simple_segment(points)
+    assert mask.dtype == bool
+    assert mask.shape == (len(points),)
+
+    expected = np.array([1, 0, 0, 1, 1, 1, 0, 0, 0])
+    assert np.allclose(expected, mask)
 
 
 def test_rect_A_interior_membership_square():
@@ -71,7 +86,9 @@ def test_rect_A_exterior_membership_square():
     # {-0.2, 1.2, 0.5}^2, excluding the (0.5, 0.5) pair.
 
     coordinate_vals = [-0.2, 0.5, 1.2]
-    points = np.array([p for p in product(coordinate_vals, repeat=2) if p != (0.5, 0.5)])
+    points = np.array(
+        [p for p in product(coordinate_vals, repeat=2) if p != (0.5, 0.5)]
+    )
 
     mask = simple_square(points)
     assert mask.dtype == bool
@@ -87,7 +104,9 @@ def test_rect_A_exterior_membership_cube():
     # {-0.2, 1.2, 0.5}^3, excluding the (0.5, 0.5, 0.5) triplet.
 
     coordinate_vals = [-0.2, 0.5, 1.2]
-    points = np.array([p for p in product(coordinate_vals, repeat=3) if p != (0.5, 0.5, 0.5)])
+    points = np.array(
+        [p for p in product(coordinate_vals, repeat=3) if p != (0.5, 0.5, 0.5)]
+    )
 
     mask = simple_cube(points)
     assert mask.dtype == bool
@@ -202,7 +221,9 @@ def test_rect_A_dense_grid_in_rectangle():
 def test_rect_A_dense_grid_in_box():
     """Dense grid strictly inside a box is fully selected."""
     xs, ys, zs = np.meshgrid(
-        np.linspace(0, 0.99, 100), np.linspace(0, 4.99, 100), np.linspace(0, 0.99, 100)
+        np.linspace(0, 0.99, 100),
+        np.linspace(0, 4.99, 100),
+        np.linspace(0, 0.99, 100),
     )
     points = np.column_stack([xs.ravel(), ys.ravel(), zs.ravel()])
 
@@ -225,7 +246,9 @@ def test_rect_A_no_points_selected():
 def test_rect_A_no_points_selected_3d():
     """Separated box selects no points."""
     # Form points spanning box [0, 1]^3
-    xs, ys, zs = np.meshgrid(np.linspace(0, 1, 10), np.linspace(0, 1, 10), np.linspace(0, 1, 10))
+    xs, ys, zs = np.meshgrid(
+        np.linspace(0, 1, 10), np.linspace(0, 1, 10), np.linspace(0, 1, 10)
+    )
     points = np.column_stack([xs.ravel(), ys.ravel(), zs.ravel()])
     # Let A be box on [2, 3]^3
     A = rect_A(np.array([2, 2, 2]), np.array([3, 3, 3]))
@@ -234,8 +257,11 @@ def test_rect_A_no_points_selected_3d():
 
 
 def test_rect_A_raises_when_bounds_invalid():
-    """Invalid bounds raise ValueError. Tests 2D or 3D examples."""
+    """Invalid bounds raise ValueError. Tests 1D, 2D or 3D examples."""
     # Min and max values of incorrect length
+    with pytest.raises(ValueError, match="Incompatible lengths"):
+        rect_A(np.array([0]), np.array([1, 1]))
+
     with pytest.raises(ValueError, match="Incompatible lengths"):
         rect_A(np.array([0, 0]), np.array([1, 1, 1]))
 
@@ -244,6 +270,12 @@ def test_rect_A_raises_when_bounds_invalid():
 
     with pytest.raises(ValueError, match="Incompatible lengths"):
         rect_A(np.array([0]), np.array([1, 1]))
+
+    # Bad x-value in 1D
+    with pytest.raises(ValueError, match="min_vals >= max_vals"):
+        rect_A(np.array([1]), np.array([1]))  # xmin == xmax
+    with pytest.raises(ValueError, match="min_vals >= max_vals"):
+        rect_A(np.array([2]), np.array([1]))  # xmin > xmax
 
     # Bad x-value in 2D
     with pytest.raises(ValueError, match="min_vals >= max_vals"):

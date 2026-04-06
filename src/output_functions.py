@@ -6,7 +6,6 @@ on n-dimensional input space and partitioning the output space.
 """
 
 from collections.abc import Callable
-from inspect import signature
 
 import numpy as np
 
@@ -35,19 +34,23 @@ def apply_map(points: np.ndarray, Q: Callable) -> np.ndarray:
     if points.shape[0] == 0:
         raise ValueError("points must be non-empty.")
 
-    q = np.asarray(Q(*points.T), dtype=float).T
+    points_new = points[:, None] if points.ndim == 1 else points
+
+    q = np.asarray(Q(*points_new.T), dtype=float).T
 
     # If q is a (N, ) vector, reshape it be (N, 1) for consistency with higher dim cases
     if q.ndim == 1:
         q = q.reshape(len(q), 1)
 
-    if len(q) != len(points):
+    if len(q) != len(points_new):
         raise RuntimeError("Q(x, y) must have same length as 'points'.")
 
     return q
 
 
-def make_partition(min_vals: np.ndarray, max_vals: np.ndarray, M: int) -> np.ndarray:
+def make_partition(
+    min_vals: np.ndarray, max_vals: np.ndarray, M: int
+) -> np.ndarray:
     """
     Along axis i of d-dimensions, build `M + 1` equal-width bin edges spanning
     [`min_vals[i]`, `max_vals[i]`].
@@ -70,6 +73,11 @@ def make_partition(min_vals: np.ndarray, max_vals: np.ndarray, M: int) -> np.nda
         raise ValueError("M must be an integer >= 1.")
 
     # Make sure mins/max values of right length, orientation
+    # Floats should be packed into arrays
+    if isinstance(min_vals, float):
+        min_vals = np.array([min_vals])
+        max_vals = np.array([max_vals])
+
     check_lambda_bounds(min_vals, max_vals)
 
     unscaled_partition = np.linspace(0, 1, M + 1)
@@ -101,7 +109,7 @@ def counts_observed(q_data: np.ndarray, bin_edges: np.ndarray) -> np.ndarray:
     if len(q_data) == 0:
         # Temporarily ensure (0, ) arrays are treated as (0, 1) arrays, e.g.
         # just to get the correct dimension
-        q_data_reshaped = np.atleast_2d(q_data)
+        q_data_reshaped = q_data[:, None] if q_data.ndim == 1 else q_data
         dim = q_data_reshaped.shape[1]
         return np.zeros((M,) * dim, dtype=np.int64)
 
