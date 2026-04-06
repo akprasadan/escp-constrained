@@ -114,6 +114,7 @@ def prob_A(
     if not np.any(mask):
         return 0.0
 
+    # print(prior_A_counts[mask] == prior_counts[mask])
     prob = np.sum(
         (prior_A_counts[mask] / prior_counts[mask]) * (obs_counts[mask] / K)
     )
@@ -157,6 +158,8 @@ def prob_over_grid(
     """
     # First some basic input validation
     check_lambda_bounds(grid_mins, grid_maxes)
+    input_dim = prior_data.shape[1]
+    assert len(grid_mins) == input_dim
 
     if not (isinstance(h, int) and h >= 1):
         raise ValueError("h must be an integer >= 1.")
@@ -168,7 +171,6 @@ def prob_over_grid(
     K = len(q_data)
 
     edges = make_partition(grid_mins, grid_maxes, h)
-    input_dim = prior_data.shape[1]
     # inside np.ndindex, we basically pass in (h, h, ..., h) in R^d
     # Then we get all indices in the box, i.e., elements of {0, 1, ..., h-1}^d
     # Then we loop over each one. We extract the bin_edges at that index
