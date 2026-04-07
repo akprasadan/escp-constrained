@@ -40,7 +40,7 @@ def synthetic_scp(
     K: int,
     J: int,
     M: int,
-    Q: Callable[[np.ndarray, np.ndarray], np.ndarray],
+    Q: Callable,
     tgd: Callable[[np.random.Generator, int], np.ndarray],
     prior: Callable[[np.random.Generator, int], np.ndarray],
     grid_mins: np.ndarray,
@@ -189,13 +189,13 @@ def empirical_scp(
 
     Parameters
     ----------
-    q_data : (K, ) numpy array
+    q_data : (K, d_D) numpy array
         The output data from an empirical dataset
     J : int
         Number of prior samples (lambda_j).
     M : int
         Number of bins for partitioning D (range of Q).
-    Q : Callable[[np.ndarray, np.ndarray], np.ndarray]
+    Q : Callable
         Map Q: Lambda -> D, called as ``Q(x, y)``.
     prior : Callable[[np.random.Generator, int], np.ndarray]
         Sampler for the prior distribution on Lambda.

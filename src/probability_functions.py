@@ -194,8 +194,8 @@ def prob_over_grid(
     {xmax, ymax, zmax}, respectively, omitting the zmin, zmax columns if 2 dimensional.
     In practice, we will only be using these dimensions."""
 
-    if input_dim in [2, 3]:
-        # yields ["x", "y"] if dim 2, or ["x", "y", "z"] if dim 3
+    if input_dim in [1, 2, 3]:
+        # e.g., yields ["x", "y"] if dim 2, or ["x", "y", "z"] if dim 3
         axis_names = ["x", "y", "z"][:input_dim]
         axis_min_names = [f"{ax}min" for ax in axis_names]
         axis_max_names = [f"{ax}max" for ax in axis_names]

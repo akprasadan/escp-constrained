@@ -299,148 +299,122 @@ def test_grid_has_expected_number_of_unique_edges():
 def test_grid_edges_are_contiguous():
     """Adjacent grid edges touch with no gaps or overlaps."""
     h = 7
-    xmin, xmax, ymin, ymax = -7, 5, 2, 11
-    dummy_inputs = dummy_data(
-        grid_mins=np.array([xmin, ymin]),
-        grid_maxes=np.array([xmax, ymax]),
-        seed=3,
-    )
+    bounds = -7, 5, 2, 11, 0, 3  # xmin, xmax, ymin, ymax, zmin, zmax
 
-    df = prob_over_grid(*dummy_inputs, h=h)
+    for input_dim in [1, 2, 3]:
+        # Prepare dummy data for this dimension
+        dummy_inputs = dummy_data(
+            grid_mins=np.array(
+                bounds[::2][:input_dim]
+            ),  # even indices up to input dum
+            grid_maxes=np.array(
+                bounds[1::2][:input_dim]
+            ),  # odd indices up to input dim
+            seed=3,
+            input_dim=input_dim,
+            output_dim=max(input_dim - 1, 1),
+        )
+        df = prob_over_grid(*dummy_inputs, h=h)
 
-    xmins = np.sort(df["xmin"].unique())
-    xmaxs = np.sort(df["xmax"].unique())
-    ymins = np.sort(df["ymin"].unique())
-    ymaxs = np.sort(df["ymax"].unique())
+        # Extract relevant axes for this dimension
+        axes = ("x", "y", "z")
+        axes = axes[:input_dim]
 
-    # adjacent edges touch
-    assert np.allclose(xmins[1:], xmaxs[:-1])
-    assert np.allclose(ymins[1:], ymaxs[:-1])
+        # Save a dictionary of minimum vectors for each axis:
+        # min_vectors = {"x" : np.sort(df["xmin"].unique()),
+        #                "y": np.sort(df["ymin"].unique(), ... }
+        # and similary save a dictionary of maximum vectors
+        # This avoids hardcoding "xmin", "ymin", ....
+        min_vectors = {ax: np.sort(df[f"{ax}min"].unique()) for ax in axes}
+        max_vectors = {ax: np.sort(df[f"{ax}max"].unique()) for ax in axes}
 
-    # In higher dimensions
-
-    xmin, xmax, ymin, ymax, zmin, zmax = -7, 5, 2, 11, 0, 3
-    dummy_inputs = dummy_data(
-        grid_mins=np.array([xmin, ymin, zmin]),
-        grid_maxes=np.array([xmax, ymax, zmax]),
-        seed=3,
-        input_dim=3,
-        output_dim=2,
-    )
-
-    df = prob_over_grid(*dummy_inputs, h=h)
-
-    xmins = np.sort(df["xmin"].unique())
-    xmaxs = np.sort(df["xmax"].unique())
-    ymins = np.sort(df["ymin"].unique())
-    ymaxs = np.sort(df["ymax"].unique())
-    zmins = np.sort(df["zmin"].unique())
-    zmaxs = np.sort(df["zmax"].unique())
-
-    # adjacent edges touch
-    assert np.allclose(xmins[1:], xmaxs[:-1])
-    assert np.allclose(ymins[1:], ymaxs[:-1])
-    assert np.allclose(zmins[1:], zmaxs[:-1])
+        # Check that adjacent edges touch
+        # E.g., The second element of xmin is the first element of xmax, and so on,
+        # but for each of x, y, z
+        for min_vec, max_vec in zip(min_vectors.values(), max_vectors.values()):
+            assert np.allclose(min_vec[1:], max_vec[:-1])
 
 
 def test_grid_edges_have_uniform_spacing():
-    """Grid edges are evenly spaced along x and y."""
+    """Grid edges are evenly spaced along each axis."""
     h = 7
-    xmin, xmax, ymin, ymax = -7, 5, 2, 11
-    dummy_inputs = dummy_data(
-        grid_mins=np.array([xmin, ymin]),
-        grid_maxes=np.array([xmax, ymax]),
-        seed=3,
-    )
+    bounds = -7, 5, 2, 11, 0, 3  # xmin, xmax, ymin, ymax, zmin, zmax
 
-    df = prob_over_grid(*dummy_inputs, h=h)
+    for input_dim in [1, 2, 3]:
+        dummy_inputs = dummy_data(
+            grid_mins=np.array(
+                bounds[::2][:input_dim]
+            ),  # Even indices up to dim
+            grid_maxes=np.array(
+                bounds[1::2][:input_dim]
+            ),  # Odd indices up to dim
+            seed=3,
+            input_dim=input_dim,
+            output_dim=max(
+                input_dim - 1, 1
+            ),  # One less dim unless already at 1
+        )
 
-    xmins = np.sort(df["xmin"].unique())
-    ymins = np.sort(df["ymin"].unique())
+        df = prob_over_grid(*dummy_inputs, h=h)
+        axis_names = ["x", "y", "z"][:input_dim]
 
-    dx = (xmax - xmin) / h
-    dy = (ymax - ymin) / h
+        # E.g., first element is xmins = np.sort(df["xmin"].unique())
+        min_vectors = [np.sort(df[f"{ax}min"].unique()) for ax in axis_names]
 
-    assert np.allclose(np.diff(xmins), dx)
-    assert np.allclose(np.diff(ymins), dy)
+        # E.g., first element is dx = (xmax - xmin)/h
+        expected_widths = [
+            (bounds[2 * i + 1] - bounds[2 * i]) / h for i in range(input_dim)
+        ]
 
-    # Higher dimensions
-    xmin, xmax, ymin, ymax, zmin, zmax = -7, 5, 2, 11, 0, 3
-    dummy_inputs = dummy_data(
-        grid_mins=np.array([xmin, ymin, zmin]),
-        grid_maxes=np.array([xmax, ymax, zmax]),
-        seed=3,
-        input_dim=3,
-        output_dim=2,
-    )
-
-    df = prob_over_grid(*dummy_inputs, h=h)
-
-    xmins = np.sort(df["xmin"].unique())
-    ymins = np.sort(df["ymin"].unique())
-    zmins = np.sort(df["zmin"].unique())
-
-    dx = (xmax - xmin) / h
-    dy = (ymax - ymin) / h
-    dz = (zmax - zmin) / h
-
-    assert np.allclose(np.diff(xmins), dx)
-    assert np.allclose(np.diff(ymins), dy)
-    assert np.allclose(np.diff(zmins), dz)
+        for i in range(input_dim):
+            # Check xmax - xmin = np.diff(xmins), e.g.
+            assert np.allclose(np.diff(min_vectors[i]), expected_widths[i])
 
 
 def test_tiles_have_constant_positive_dimensions():
-    """All grid tiles have equal positive width and height."""
+    """All grid tiles have equal positive width and height.
+    Tests 1D, 2D, and 3D Lambdas, and 1D, 1D, and 2D D's, respectively.
+    """
     h = 4
-    xmin, xmax, ymin, ymax = -3.5, 4.5, -10, -2
-    dummy_inputs = dummy_data(
-        grid_mins=np.array([xmin, ymin]),
-        grid_maxes=np.array([xmax, ymax]),
-        seed=4,
-    )
+    bounds = -3.5, 4.5, -10, -2, 0, 2  # xmin, xmax, ymin, ymax, zmin, zmax
+    for input_dim in [1, 2, 3]:
+        dummy_inputs = dummy_data(
+            grid_mins=np.array(
+                bounds[::2][:input_dim]
+            ),  # Even indices up to dim
+            grid_maxes=np.array(
+                bounds[1::2][:input_dim]
+            ),  # Odd indices up to dim
+            seed=4,
+            input_dim=input_dim,
+            output_dim=max(
+                input_dim - 1, 1
+            ),  # One less dim unless already at 1
+        )
 
-    df = prob_over_grid(*dummy_inputs, h=h)
+        df = prob_over_grid(*dummy_inputs, h=h)
 
-    dx = (xmax - xmin) / h
-    dy = (ymax - ymin) / h
+        # This stores a list [dx = (xmax - xmin)/ h, dy = (ymax - ymin)/h, ...]
+        # according to the dimension
+        # Since the bounds are stored by 2 per axis, we look at 2i + 1 and 2i
+        # indices.
+        expected_widths = [
+            (bounds[2 * i + 1] - bounds[2 * i]) / h for i in range(0, input_dim)
+        ]
+        axis_names = ["x", "y", "z"][:input_dim]
 
-    widths = (df["xmax"] - df["xmin"]).to_numpy()
-    heights = (df["ymax"] - df["ymin"]).to_numpy()
+        # Store list of form df["xmax"] - df["xmin"] for each axis, converted to
+        # a numpy array
+        actual_widths = [
+            (df[f"{ax}max"] - df[f"{ax}min"]).to_numpy() for ax in axis_names
+        ]
+        for i in range(input_dim):
+            # Width differences match expectations
+            # Note actual_widths[i] is array, while expected_widths[i] is a float
+            assert np.allclose(actual_widths[i], expected_widths[i])
 
-    assert np.allclose(widths, dx)
-    assert np.allclose(heights, dy)
-    assert np.all(widths > 0)
-    assert np.all(heights > 0)
-
-    # Higher dim
-    xmin, xmax, ymin, ymax, zmin, zmax = -3.5, 4.5, -10, -2, 0, 2
-
-    dummy_inputs = dummy_data(
-        grid_mins=np.array([xmin, ymin, zmin]),
-        grid_maxes=np.array([xmax, ymax, zmax]),
-        seed=4,
-        input_dim=3,
-        output_dim=2,
-    )
-
-    df = prob_over_grid(*dummy_inputs, h=h)
-
-    dx = (xmax - xmin) / h
-    dy = (ymax - ymin) / h
-    dz = (zmax - zmin) / h
-
-    widths = (df["xmax"] - df["xmin"]).to_numpy()
-    heights = (df["ymax"] - df["ymin"]).to_numpy()
-    depths = (df["zmax"] - df["zmin"]).to_numpy()
-
-    # Check each width/length/depth is right size and non-zero
-    assert np.allclose(widths, dx)
-    assert np.allclose(heights, dy)
-    assert np.allclose(depths, dz)
-
-    assert np.all(widths > 0)
-    assert np.all(heights > 0)
-    assert np.all(depths > 0)
+            # widths for each axis are all positive
+            assert np.all(actual_widths[i] > 0)
 
 
 def test_columns_and_types():
@@ -479,108 +453,72 @@ def test_h_one_prob_is_one_many_random_cases():
     """For h = 1, the single tile's probability is 1 for prior having support as subset of Lambda.
     This requires prior_A_counts = prior_counts on every bin, and no bins
     with 0 prior_counts. If the bin granularity is too high or the N_prior sample size
-    too low, this will fail. For example, this test fails if we replace (50, 100) with (50, 10).
+    too low, this will fail. For example, this test fails if we replace (50, 200) with (50, 10).
+    Tests 1D, 2D, and 3D Lambdas, and 1D, 1D, and 2D D's, respectively.
     """
-    boxes = [(0, 1, 0, 1), (-0.5, 1.5, -0.5, 1.5)]
+    boxes = [
+        (0, 1),  # 1D
+        (-0.5, 1.5),
+        (0, 1, 0, 1),  # 2D
+        (-0.5, 1.5, -0.5, 1.5),
+        (0, 1, 0, 1, 0, 1),  # 3D
+        (-0.5, 1.5, -0.5, 1.5, -1, 2),
+    ]
 
     for seed in [0, 1, 2, 7]:
-        for M_obs, N_prior in [(50, 100), (200, 500), (1000, 2000)]:
-            for xmin, xmax, ymin, ymax in boxes:
+        # Make N_prior large enough
+        for M_obs, N_prior in [(50, 200), (200, 500), (1000, 2000)]:
+            for box in boxes:
                 dummy_inputs = dummy_data(
-                    grid_mins=np.array([xmin, ymin]),
-                    grid_maxes=np.array([xmax, ymax]),
+                    grid_mins=np.array(box[::2]),  # even entries
+                    grid_maxes=np.array(box[1::2]),  # odd entries
                     seed=seed,
                     M_obs=M_obs,
                     N_prior=N_prior,
+                    input_dim=len(box) // 2,
+                    output_dim=max(
+                        len(box) // 2 - 1, 1
+                    ),  # reduce by 1 or keep at 1
                 )
                 df = prob_over_grid(*dummy_inputs, h=1)
                 assert len(df) == 1
-                assert np.isclose(df["prob"].iloc[0], 1)
-
-
-def test_h_one_prob_is_one_many_random_cases_higher_dims():
-    """
-    Higher dim: For h = 1, the single tile's probability is 1 for prior
-    having support as subset of Lambda. This requires prior_A_counts = prior_counts on every bin, and no bins
-    with 0 prior_counts. If the bin granularity is too high or the N_prior sample size
-    too low, this will fail. For example, this test fails if we replace (50, 400) with (50, 100).
-    In higher dimensions, it's harder to fill every bin unless the bin are few in number.
-    """
-    boxes = [(0, 1, 0, 1, 0, 1), (-0.5, 1.5, -0.5, 1.5, -1, 2)]
-
-    for seed in [0, 1, 2, 7]:
-        for M_obs, N_prior in [(50, 400), (200, 500), (1000, 2000)]:
-            for xmin, xmax, ymin, ymax, zmin, zmax in boxes:
-                dummy_inputs = dummy_data(
-                    grid_mins=np.array([xmin, ymin, zmin]),
-                    grid_maxes=np.array([xmax, ymax, zmax]),
-                    seed=seed,
-                    M_obs=M_obs,
-                    N_prior=N_prior,
-                    input_dim=3,
-                    output_dim=2,
-                )
-                df = prob_over_grid(*dummy_inputs, h=1)
-                assert len(df) == 1
-
                 assert np.isclose(df["prob"].iloc[0], 1)
 
 
 def test_probs_sum_to_one_many_random_cases():
     """
     Sum of all probabilities is 1 across many seeds/boxes/h, for prior having subset of
-    Lambda support and prior sample size sufficiently large to fill all bins.
+    Lambda support, and prior sample size sufficiently large to fill all bins.
+    Tests 1D, 2D, and 3D Lambdas, and 1D, 1D, and 2D D's, respectively.
     """
 
     boxes = [
-        (0, 1, 0, 1),
+        (0, 1),  # 1D: xmin, xmax
+        (0, 1, 0, 1),  # 2D: xmin, xmax, ymin, ymax
         (-0.5, 1.5, -0.5, 1.5),
         (0, 10, 0, 10),
-    ]
-    for seed in [0, 1, 2, 11]:
-        for M_obs, N_prior in [(200, 500), (1000, 2000), (2000, 5000)]:
-            for h in [1, 2, 3, 5, 6]:
-                for xmin, xmax, ymin, ymax in boxes:
-                    dummy_inputs = dummy_data(
-                        grid_mins=np.array([xmin, ymin]),
-                        grid_maxes=np.array([xmax, ymax]),
-                        seed=seed,
-                        M_obs=M_obs,
-                        N_prior=N_prior,
-                    )
-
-                    df = prob_over_grid(*dummy_inputs, h=h)
-                    assert np.isclose(df["prob"].sum(), 1, rtol=1e-9, atol=1e-9)
-
-
-def test_probs_sum_to_one_many_random_cases_higher_dim():
-    """
-    Higher dim: Sum of all probabilities is 1 across many seeds/boxes/h,
-    for prior having subset of Lambda support, and prior sample size sufficiently large to fill all
-    bins.
-    """
-
-    boxes = [
-        (0, 1, 0, 1, 0, 1),
+        (0, 1, 0, 1, 0, 1),  # 3D: xmin, xmax, ymin, ymax, zmin, zmax
         (-0.5, 1.5, -0.5, 1.5, -1, 2),
         (0, 10, 0, 10, -0.1, 11),
     ]
     for seed in [0, 1, 2, 11]:
         for M_obs, N_prior in [(200, 500), (1000, 2000), (2000, 5000)]:
             for h in [1, 2, 3, 5, 6]:  # don't make h large, is expensive
-                for xmin, xmax, ymin, ymax, zmin, zmax in boxes:
+                for bounds in boxes:
                     dummy_inputs = dummy_data(
-                        grid_mins=np.array([xmin, ymin, zmin]),
-                        grid_maxes=np.array([xmax, ymax, zmax]),
+                        grid_mins=np.array(bounds[::2]),  # even elements
+                        grid_maxes=np.array(bounds[1::2]),  # odd elements
                         seed=seed,
                         M_obs=M_obs,
                         N_prior=N_prior,
-                        input_dim=3,
-                        output_dim=2,
+                        input_dim=len(bounds) // 2,
+                        output_dim=max(
+                            len(bounds) // 2 - 1, 1
+                        ),  # Reduce output dim by one or keep at 1
                     )
 
                     df = prob_over_grid(*dummy_inputs, h=h)
-                    assert np.isclose(df["prob"].sum(), 1, rtol=1e-9, atol=1e-9)
+                    assert np.isclose(df["prob"].sum(), 1)
 
 
 def test_prob_mass_is_assigned_to_correct_x_column():

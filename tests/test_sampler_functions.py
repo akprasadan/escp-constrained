@@ -41,7 +41,7 @@ distr_list = [uniform_sampler, gaussian_sampler, constant_sampler]
 
 
 def test_sampler_shapes_and_type():
-    """Each sampler/seed/sample size combo returns (n, 2) array, float dtype,."""
+    """Each 2D sampler/seed/sample size combo returns (n, 2) array, float dtype,."""
     for n, distr, seed in product(n_list, distr_list, [0, 1, 2]):
         pts = sample_distr(n=n, seed=seed, distr=distr)
         assert isinstance(pts, np.ndarray)
@@ -57,7 +57,7 @@ def test_uniform_sampler_range():
 
 
 def test_gaussian_and_deterministic_samplers_not_confined_to_01():
-    """Gaussian and constant sampler produces array with values can outside [0,1]."""
+    """Gaussian and constant sampler produces array with some values outside [0,1]."""
     for n, distr in product(n_list, [gaussian_sampler, constant_sampler]):
         pts = sample_distr(n=n, seed=2, distr=distr)
         assert np.any((pts < 0) | (pts > 1))
