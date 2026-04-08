@@ -15,12 +15,12 @@ from collections.abc import Callable
 import numpy as np
 import pandas as pd
 
-from src.probability_functions import prob_over_grid as prob_over_grid
-from src.sampler_functions import sample_distr as sample_distr
-from src.output_functions import make_partition as make_partition
-from src.output_functions import apply_map as apply_map
-from src.box_functions import rect_A as rect_A
-from src.box_functions import check_lambda_bounds as check_lambda_bounds
+from src.probability_functions import prob_over_grid
+from src.sampler_functions import sample_distr
+from src.output_functions import make_partition
+from src.output_functions import apply_map
+from src.box_functions import rect_A
+from src.box_functions import check_lambda_bounds
 
 
 def simplify_low_dimensional_dataframes(
@@ -225,6 +225,8 @@ def empirical_scp(
     prior_seed = int(master.integers(0, 2**63 - 1))
 
     # 1) Partition q_data into M bins
+    # May need to add some wiggle room here in the np.max value.
+
     q_mins, q_maxes = np.min(q_data, axis=0), np.max(q_data, axis=0)
     bin_edges = make_partition(q_mins, q_maxes, M)
 

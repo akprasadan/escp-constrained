@@ -20,8 +20,8 @@ import numpy as np
 from pandas.api.types import is_numeric_dtype
 import pytest
 
-from src.output_functions import make_partition as make_partition
-from src.probability_functions import prob_over_grid as prob_over_grid
+from src.output_functions import make_partition
+from src.probability_functions import prob_over_grid
 
 
 def dummy_data(

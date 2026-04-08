@@ -9,7 +9,7 @@ from collections.abc import Callable
 
 import numpy as np
 
-from src.box_functions import check_lambda_bounds as check_lambda_bounds
+from src.box_functions import check_lambda_bounds
 
 
 def apply_map(points: np.ndarray, Q: Callable) -> np.ndarray:
@@ -89,7 +89,7 @@ def make_partition(
 
 def counts_observed(q_data: np.ndarray, bin_edges: np.ndarray) -> np.ndarray:
     """
-    Count the number of values falling into each of M*d bins on a d-dimensional rectangle.
+    Count the number of values falling into each of M^d bins on a d-dimensional rectangle.
     If no points are given, return 0 for each of the bins.
 
     Parameters

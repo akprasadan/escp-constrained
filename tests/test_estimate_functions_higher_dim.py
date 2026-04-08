@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
-from src.estimate_functions import synthetic_scp as synthetic_scp
-from src.estimate_functions import empirical_scp as empirical_scp
+from src.estimate_functions import synthetic_scp
+from src.estimate_functions import empirical_scp
 
 XMIN, XMAX, YMIN, YMAX, ZMIN, ZMAX = -8, 8, -8, 8, 0, 1
 

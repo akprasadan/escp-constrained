@@ -15,7 +15,7 @@ from typing import cast
 import numpy as np
 import pytest
 
-from src.output_functions import make_partition as make_partition
+from src.output_functions import make_partition
 
 
 def test_make_partition_basic():

@@ -12,7 +12,7 @@ Tests:
 import numpy as np
 import pytest
 
-from src.output_functions import apply_map as apply_map
+from src.output_functions import apply_map
 
 
 def Q_scale(x):
@@ -37,7 +37,7 @@ def test_apply_map_one_D():
     q_vals = apply_map(points, Q_scale)
 
     # Basic shape, type checks
-    assert q_vals.shape == (4, 1)
+    assert q_vals.shape == (5, 1)
     assert q_vals.dtype.kind == "f"
 
     expected = np.array([-6, 0, 3, 12, 1.5])[:, None]

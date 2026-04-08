@@ -14,7 +14,7 @@ from itertools import product
 import numpy as np
 import pytest
 
-from src.sampler_functions import sample_distr as sample_distr
+from src.sampler_functions import sample_distr
 
 
 def uniform_sampler(rng: np.random.Generator, n: int) -> np.ndarray:

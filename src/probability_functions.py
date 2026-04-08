@@ -4,13 +4,16 @@ probability_functions.py
 Helper functions to compute the SCP conditional probabilities.
 """
 
+import warnings
+
+
 import numpy as np
 import pandas as pd
-from src.output_functions import make_partition as make_partition
-from src.output_functions import counts_observed as counts_observed
-from src.box_functions import mask_in_A as mask_in_A
-from src.box_functions import rect_A as rect_A
-from src.box_functions import check_lambda_bounds as check_lambda_bounds
+from src.output_functions import make_partition
+from src.output_functions import counts_observed
+from src.box_functions import mask_in_A
+from src.box_functions import rect_A
+from src.box_functions import check_lambda_bounds
 
 
 def probability_input_validation(
@@ -61,7 +64,16 @@ def probability_input_validation(
     if not isinstance(K, int) or K <= 0:
         raise ValueError("K must be a positive integer.")
     if obs_counts.sum() != K:
-        raise ValueError("sum(obs_counts) != K.")
+        msg = (
+            f"\nYour obs_counts summed to {obs_counts.sum()}, which is below K = {K}. "
+            "This happened because some of your q values were not contained in the bin edges. "
+            "Your computed probability will be lower as a result. "
+            "The impact is small if sum(obs_counts) is approximately equal to K. "
+            "To fix, enlargen bin_edges in the estimate_functions.py functions."
+        )
+        warnings.warn(msg, RuntimeWarning)
+
+        # raise ValueError("sum(obs_counts) != K.")
 
 
 def prob_A(

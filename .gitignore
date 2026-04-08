@@ -11,3 +11,10 @@ __pycache__/
 
 # MacOS Metadata
 .DS_Store
+
+data/
+plots/
+src/example_one.py
+src/example_two.py
+src/example_three.py
+tests/check_pushforward.py

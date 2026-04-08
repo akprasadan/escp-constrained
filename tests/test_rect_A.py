@@ -15,7 +15,7 @@ import pytest
 from itertools import product
 
 
-from src.box_functions import rect_A as rect_A
+from src.box_functions import rect_A
 
 
 # [0, 1)

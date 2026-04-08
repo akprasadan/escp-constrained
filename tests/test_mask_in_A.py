@@ -14,10 +14,10 @@ Tests:
 import numpy as np
 import pytest
 
-from src.output_functions import apply_map as apply_map
-from src.output_functions import counts_observed as counts_observed
-from src.box_functions import mask_in_A as mask_in_A
-from src.box_functions import rect_A as rect_A
+from src.output_functions import apply_map
+from src.output_functions import counts_observed
+from src.box_functions import mask_in_A
+from src.box_functions import rect_A
 
 
 def test_mask_in_A_all_points_in_rect_A_equal_bins():

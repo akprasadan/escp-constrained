@@ -12,7 +12,7 @@ Tests:
 
 import numpy as np
 
-from src.output_functions import counts_observed as counts_observed
+from src.output_functions import counts_observed
 
 
 def test_counts_observed_basic():
