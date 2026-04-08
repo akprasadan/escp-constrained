@@ -45,6 +45,7 @@ def compute_cost(
     u: float,
     Q: Callable,
     prior: Callable[[np.random.Generator, int], np.ndarray],
+    prior_data: np.ndarray | None,
     MC_sample_size: int,
     lambda_mins: np.ndarray,
     lambda_maxes: np.ndarray,
@@ -55,9 +56,16 @@ def compute_cost(
     1; We draw 10000 points lambda_i ~ prior (truncated to Lambda).
     2. Evaluate |q - Q(lambda_i, u)|^2 for each i
     3. Compute the average value of these evaluations, which approximates c(q, u).
+
+    The user can either pass in a prior_sample directly or input a prior distribution.
     """
-    # (N, dim(Lambda)) array of prior samples
-    prior_sample = sample_distr(n=MC_sample_size, seed=seed, distr=prior)
+    # (N, dim(Lambda)) array of prior samples, either using given distribution or
+    # direct data input
+    prior_sample = (
+        sample_distr(n=MC_sample_size, seed=seed, distr=prior)
+        if prior_data is None
+        else prior_data
+    )
 
     # Constrain prior to lie in Lambda
     lambda_bounds_mask = rect_A(lambda_mins, lambda_maxes)
@@ -82,6 +90,7 @@ def run_sinkhorn(
     u_data: np.ndarray,
     Q: Callable,
     prior: Callable[[np.random.Generator, int], np.ndarray],
+    prior_data: np.ndarray | None,
     lambda_mins: np.ndarray,
     lambda_maxes: np.ndarray,
     MC_sample_size: int,
@@ -89,7 +98,15 @@ def run_sinkhorn(
     seed: int,
 ):
 
-    fixed_cost_args = Q, prior, MC_sample_size, lambda_mins, lambda_maxes, seed
+    fixed_cost_args = (
+        Q,
+        prior,
+        prior_data,
+        MC_sample_size,
+        lambda_mins,
+        lambda_maxes,
+        seed,
+    )
     cost_matrix = np.array(
         [[compute_cost(q, u, *fixed_cost_args) for q in q_data] for u in u_data]
     )
