@@ -34,13 +34,13 @@ def apply_map(points: np.ndarray, Q: Callable) -> np.ndarray:
     if points.shape[0] == 0:
         raise ValueError("points must be non-empty.")
 
+    # Make sure (N, ) arrays are treated as (N, 1)
     points_new = points[:, None] if points.ndim == 1 else points
 
     q = np.asarray(Q(*points_new.T), dtype=float).T
 
-    # If q is a (N, ) vector, reshape it be (N, 1) for consistency with higher dim cases
-    if q.ndim == 1:
-        q = q.reshape(len(q), 1)
+    #  Make sure (N, ) arrays are treated as (N, 1)
+    q = q[:, None] if q.ndim == 1 else q
 
     if len(q) != len(points_new):
         raise RuntimeError("Q(x, y) must have same length as 'points'.")

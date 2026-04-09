@@ -36,10 +36,6 @@ from src.sampler_functions import sample_distr
 from src.output_functions import apply_map
 
 
-def uniform_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
-    return rng.uniform(0, 4, size=(n, 2))
-
-
 def compute_cost(
     q: float,
     u: float,
@@ -91,12 +87,24 @@ def run_sinkhorn(
     Q: Callable,
     prior: Callable[[np.random.Generator, int], np.ndarray],
     prior_data: np.ndarray | None,
+    reg_term: float,
     lambda_mins: np.ndarray,
     lambda_maxes: np.ndarray,
     MC_sample_size: int,
     grid_sample_size: int,
     seed: int,
 ):
+
+    q_grid = np.linspace(np.min(q_data), np.max(q_data), grid_sample_size)
+    u_grid = np.linspace(np.min(u_data), np.max(u_data), grid_sample_size)
+
+    # Estimate empirical distribution
+    empirical_q = np.histogram(q_data, bins=grid_sample_size)[0]
+    empirical_u = np.histogram(u_data, bins=grid_sample_size)[0]
+
+    # Normalize for stability
+    empirical_q = empirical_q / empirical_q.sum()
+    empirical_u = empirical_u / empirical_u.sum()
 
     fixed_cost_args = (
         Q,
@@ -108,39 +116,59 @@ def run_sinkhorn(
         seed,
     )
     cost_matrix = np.array(
-        [[compute_cost(q, u, *fixed_cost_args) for q in q_data] for u in u_data]
+        [[compute_cost(q, u, *fixed_cost_args) for q in q_grid] for u in u_grid]
     )
+
+    cost_matrix = cost_matrix / np.sum(cost_matrix)
+
     sinkhorn_sol = ot.sinkhorn(
-        a=q_data, b=u_data, M=cost_matrix, reg=0.001, verbose=False
+        a=empirical_q,
+        b=empirical_u,
+        M=cost_matrix,
+        reg=reg_term,
+        verbose=False,
     )
 
-    q_grid = np.linspace(np.min(q_data), np.max(q_data), grid_sample_size)
-    u_grid = np.linspace(0.01, 0.99, grid_sample_size)
+    sinkhorn_sol = sinkhorn_sol / sinkhorn_sol.sum()
 
-    pl.figure(4, figsize=(5, 5))
-    ot.plot.plot1D_mat(q_data, u_data, sinkhorn_sol, "OT matrix Sinkhorn")
+    pl.figure(figsize=(5, 5))
+    ot.plot.plot1D_mat(
+        empirical_q,
+        empirical_u,
+        sinkhorn_sol,
+        title="Sinkorn Solution",
+        a_label="D",
+        b_label="U",
+    )
 
     pl.show()
 
 
 if __name__ == "__main__":
-    q_data = np.random.normal(5, 30, 50)
-    u_data = np.random.random(50)
-    prior = uniform_sampler
-    lambda_mins = np.array([1, 1])
-    lambda_maxes = np.array([3, 3])
-    MC_sample_size = 1000
-    grid_sample_size = 100
+    mean = [2, 2]
+    cov = [[1, 0], [0, 20]]
+    lambda_data = np.random.multivariate_normal(mean, cov, 5000)
+    u_data = np.random.normal(-1, 10, 5000)
+    lambda_u_data = np.hstack((lambda_data, u_data[:, None]))
     Q = lambda x, y, z: x**2 + y**2 + z
+    q_data = apply_map(lambda_u_data, Q)
 
-    # run_sinkhorn(
-    #     q_data,
-    #     u_data,
-    #     Q,
-    #     prior,
-    #     lambda_mins,
-    #     lambda_maxes,
-    #     MC_sample_size,
-    #     grid_sample_size,
-    #     seed=1,
-    # )
+    lambda_mins = lambda_data.min(axis=0)
+    lambda_maxes = lambda_data.max(axis=0)
+
+    def uniform_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
+        return rng.uniform(lambda_mins, lambda_maxes, size=(n, 2))
+
+    run_sinkhorn(
+        q_data,
+        u_data,
+        Q,
+        prior=uniform_sampler,
+        prior_data=None,
+        reg_term=0.001,
+        lambda_mins=lambda_mins,
+        lambda_maxes=lambda_maxes,
+        MC_sample_size=10000,
+        grid_sample_size=100,
+        seed=1,
+    )

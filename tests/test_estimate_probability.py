@@ -244,7 +244,10 @@ def test_prob_A_wrong_K_sum_raises():
     prior_A_counts = np.array([0, 1, 4])
     obs_counts = np.array([1, 1, 0])
     for bad_K in [1, 4, 3]:
-        with pytest.warns(RuntimeWarning, match=r"Your obs_counts summed to"):
+        with pytest.warns(
+            RuntimeWarning,
+            match=r"observed q values were not contained in the bin edges",
+        ):
             prob_A(prior_counts, prior_A_counts, obs_counts, bad_K)
 
 
@@ -254,7 +257,10 @@ def test_prob_A_wrong_K_sum_raises_higher_dim():
     prior_A_counts = np.array([[5, 4, 0], [1, 4, 0], [0, 0, 1]])
     obs_counts = np.array([[20, 10, 0], [0, 5, 0], [0, 2, 1]])
     for bad_K in [36, 37, 39]:
-        with pytest.warns(RuntimeWarning, match=r"Your obs_counts summed to"):
+        with pytest.warns(
+            RuntimeWarning,
+            match=r"observed q values were not contained in the bin edges",
+        ):
             prob_A(prior_counts, prior_A_counts, obs_counts, bad_K)
 
 

@@ -65,15 +65,12 @@ def probability_input_validation(
         raise ValueError("K must be a positive integer.")
     if obs_counts.sum() != K:
         msg = (
-            f"\nYour obs_counts summed to {obs_counts.sum()}, which is below K = {K}. "
-            "This happened because some of your q values were not contained in the bin edges. "
-            "Your computed probability will be lower as a result. "
-            "The impact is small if sum(obs_counts) is approximately equal to K. "
-            "To fix, enlargen bin_edges in the estimate_functions.py functions."
+            f"\n{K - obs_counts.sum()} / {K} = {(1 - obs_counts.sum()/K) * 100:.3f}% "
+            "of your observed q values were not contained in the bin edges. This will "
+            "lower your estimated probability slightly. To fix, enlargen bin_edges "
+            "in the estimate_functions.py functions."
         )
         warnings.warn(msg, RuntimeWarning)
-
-        # raise ValueError("sum(obs_counts) != K.")
 
 
 def prob_A(
