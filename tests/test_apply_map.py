@@ -24,7 +24,7 @@ def Q_add(x, y):
 
 
 def Q_dim3_to_2(x, y, z):
-    return [x + y - z, x + z]
+    return np.array([x + y - z, x + z])
 
 
 def squared_distance(x, y):
@@ -72,7 +72,7 @@ def test_apply_map_3_to_2_dim_q_again():
     points = np.array([[0, 1, 2], [2, 3, 4], [4, -5, 1], [-1, 0.5, 0]])
 
     def Q(x, y, z):
-        return [2 * x + 5 * y - z, z]
+        return np.array([2 * x + 5 * y - z, z])
 
     expected = np.array([[3, 2], [15, 4], [-18, 1], [0.5, 0]])
     q_vals = apply_map(points, Q)
@@ -86,7 +86,7 @@ def test_apply_map_3_to_2_dim_q_again_swapped_output():
     points = np.array([[0, 1, 2], [2, 3, 4], [4, -5, 1], [-1, 0.5, 0]])
 
     def Q(x, y, z):
-        return [z, 2 * x + 5 * y - z]
+        return np.array([z, 2 * x + 5 * y - z])
 
     expected = np.array([[2, 3], [4, 15], [1, -18], [0, 0.5]])
     q_vals = apply_map(points, Q)
@@ -139,7 +139,6 @@ def test_apply_map_asymmetric_q():
     def Q(x, y):
         return 2 * x + 5 * y
 
-    x, y = points[:, 0], points[:, 1]
     expected = np.array([[5], [19], [-17], [0.5]])
     q_vals = apply_map(points, Q)
 

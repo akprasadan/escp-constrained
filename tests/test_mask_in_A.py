@@ -88,7 +88,7 @@ def test_mask_in_A_excludes_one_point_right():
     )
 
     # Tighten xmax to exclude the point (0.7, 0.8) (index 3).
-    def A_rect(pts):
+    def A_rect(pts: np.ndarray):
         x, y = pts[:, 0], pts[:, 1]
         return (x >= 0) & (x <= 0.65) & (y >= 0.1) & (y <= 0.95)
 
@@ -337,11 +337,7 @@ Q_PRIOR_DATA_2D = np.array(
 )
 PRIOR_DATA_3D = np.array(
     [
-        [
-            0.01,
-            0.101,
-            0.15,
-        ],  # very close to leaving mask if we increase x lower lim
+        [0.01, 0.101, 0.15],  # close to leaving mask if we increase x lower lim
         [0.15, 0.2, 0.15],  # we will later only pick this point.
         [2, 1, 1],
         [2.9, 0.2, 1.5],
@@ -349,11 +345,7 @@ PRIOR_DATA_3D = np.array(
         [0.2, 0.9, 1.5],
         [1, 3.9, 0.15],
         [2, 3, 1.5],
-        [
-            0.5,
-            0.5,
-            1.99,
-        ],  # Very close to leaving below mask if we decrease z upper limit
+        [0.5, 0.5, 1.99],  # close to leaving mask if we decrease z upper limit
     ]
 )
 
@@ -479,7 +471,7 @@ def test_mask_in_A_excludes_all_but_one_point_higher_dim():
 
 def test_mask_in_A_excludes_all_points_higher_dim():
     """
-    Higher_dim: exclude all points!
+    Higher dim: exclude all points!
     """
 
     # Choose box to only remove the last point of prior_data

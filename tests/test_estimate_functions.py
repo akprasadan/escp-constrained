@@ -24,7 +24,7 @@ XMIN, XMAX, YMIN, YMAX = -8, 8, -8, 8
 class EstimationParams(TypedDict):
     J: int
     M: int
-    Q: Callable[[np.ndarray, np.ndarray], np.ndarray]
+    Q: Callable[..., np.ndarray]
     grid_mins: np.ndarray
     grid_maxes: np.ndarray
     lambda_grid_size: int
@@ -42,25 +42,25 @@ FIXED_SCP_PARAMS: EstimationParams = {
 }
 
 
-def gaussian_tgd(rng, J):
+def gaussian_tgd(rng: np.random.Generator, J: int):
     x = rng.normal(2, 2, size=J)
     y = rng.normal(-1, 1, size=J)
     return np.column_stack((x, y))
 
 
-def gaussian_tgd_huge_variance(rng, J):
+def gaussian_tgd_huge_variance(rng: np.random.Generator, J: int):
     x = rng.normal(5, 10, size=J)
     y = rng.normal(-5, 10, size=J)
     return np.column_stack((x, y))
 
 
-def uniform_prior(rng, J):
+def uniform_prior(rng: np.random.Generator, J: int):
     x = rng.uniform(-5, 5, size=J)
     y = rng.uniform(-5, 5, size=J)
     return np.column_stack((x, y))
 
 
-def huge_uniform_prior(rng, J):
+def huge_uniform_prior(rng: np.random.Generator, J: int):
     x = rng.uniform(-20, 20, size=J)
     y = rng.uniform(-20, 20, size=J)
     return np.column_stack((x, y))

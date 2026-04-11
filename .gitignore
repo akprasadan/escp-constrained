@@ -5,6 +5,7 @@
 # Pytest
 .pytest_cache/
 __pycache__/
+.coverage
 
 # VS Code
 .vscode/

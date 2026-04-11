@@ -28,11 +28,11 @@ from src.probability_functions import prob_over_grid
 def dummy_data(
     grid_mins: np.ndarray,
     grid_maxes: np.ndarray,
+    input_dim: int,
+    output_dim: int,
     seed: int = 0,
     M_obs: int = 200,
     N_prior: int = 500,
-    input_dim=2,
-    output_dim=1,
 ):
     """A helper function to generate 1D data.
 
@@ -40,7 +40,6 @@ def dummy_data(
     - q_prior_data and prior_data share length N_prior.
     - q values in [0, 1]^output_dim, bin_edges cover [0, 1]^output_dim.
     """
-
     rng = np.random.default_rng(seed)
     q_data = rng.random((M_obs, output_dim))  # Over [0, 1]^output_dim
     prior_data = rng.random((N_prior, input_dim))  # Over [0, 1]^input_dim
@@ -69,6 +68,7 @@ def test_rows_are_h_squared_loop():
                 grid_maxes=10 * np.ones(input_dim),  # [10, 10], e.g.
                 input_dim=input_dim,
                 output_dim=output_dim,
+                seed=1,
             )
             df = prob_over_grid(*dummy_inputs, h=h)
             assert len(df) == h**input_dim
@@ -101,6 +101,7 @@ def test_invalid_inputs_raise():
             grid_maxes=np.array(maxes),
             input_dim=len(mins),
             output_dim=output_dim,
+            seed=2,
         )
         for (mins, maxes), output_dim in zip(bad_bounds, output_dims)
     ]
@@ -119,6 +120,7 @@ def test_invalid_inputs_raise():
             grid_maxes=np.array(maxes),
             input_dim=len(mins),
             output_dim=1,
+            seed=3,
         )
         for mins, maxes in good_bounds
     ]
@@ -138,6 +140,7 @@ def test_q_prior_data_prior_data_length_mismatch_raises():
                 grid_maxes=np.ones(input_dim),
                 input_dim=input_dim,
                 output_dim=output_dim,
+                seed=4,
             )
         )
         # Truncate prior_data intentionally
@@ -163,16 +166,16 @@ def test_q_prior_data_prior_data_length_mismatch_raises():
 
 def test_min_max_match_inputs():
     """Min/Max boundaries must match the input box. In dimensions 1, 2, 3."""
-    min_bounds = -3.5, 5.5, -1
-    max_bounds = 3.75, 10, 12
+    min_bounds = -3.5, 5.5, -1  # xmin, ymin, zmin
+    max_bounds = 3.75, 10, 12  # xmax, ymax, zmax
 
     for input_dim in [1, 2, 3]:
         dummy_inputs = dummy_data(
             grid_mins=np.array(min_bounds[:input_dim]),
             grid_maxes=np.array(max_bounds[:input_dim]),
-            seed=1,
             input_dim=input_dim,
             output_dim=max(input_dim - 1, 1),
+            seed=5,
         )
         df = prob_over_grid(*dummy_inputs, h=3)
 
@@ -204,9 +207,9 @@ def test_x_and_y_and_z_grids_respect_bounds_and_spacing():
         dummy_inputs = dummy_data(
             grid_mins=np.array(min_bounds[:input_dim]),
             grid_maxes=np.array(max_bounds[:input_dim]),
-            seed=2,
             input_dim=input_dim,
             output_dim=max(input_dim - 1, 1),
+            seed=6,
         )
 
         df = prob_over_grid(*dummy_inputs, h=h)
@@ -238,9 +241,9 @@ def test_grid_has_expected_number_of_unique_edges():
         dummy_inputs = dummy_data(
             grid_mins=np.array(min_bounds[:input_dim]),
             grid_maxes=np.array(max_bounds[:input_dim]),
-            seed=3,
             input_dim=input_dim,
             output_dim=max(input_dim - 1, 1),
+            seed=7,
         )
 
         df = prob_over_grid(*dummy_inputs, h=h)
@@ -263,9 +266,9 @@ def test_grid_edges_are_contiguous():
         dummy_inputs = dummy_data(
             grid_mins=np.array(min_bounds[:input_dim]),
             grid_maxes=np.array(max_bounds[:input_dim]),
-            seed=3,
             input_dim=input_dim,
             output_dim=max(input_dim - 1, 1),
+            seed=8,
         )
         df = prob_over_grid(*dummy_inputs, h=h)
 
@@ -298,11 +301,9 @@ def test_grid_edges_have_uniform_spacing():
         dummy_inputs = dummy_data(
             grid_mins=np.array(min_bounds[:input_dim]),
             grid_maxes=np.array(max_bounds[:input_dim]),
-            seed=3,
             input_dim=input_dim,
-            output_dim=max(
-                input_dim - 1, 1
-            ),  # One less dim unless already at 1
+            output_dim=max(input_dim - 1, 1),
+            seed=9,
         )
 
         df = prob_over_grid(*dummy_inputs, h=h)
@@ -332,11 +333,11 @@ def test_tiles_have_constant_positive_dimensions():
         dummy_inputs = dummy_data(
             grid_mins=np.array(min_bounds[:input_dim]),
             grid_maxes=np.array(max_bounds[:input_dim]),
-            seed=4,
             input_dim=input_dim,
             output_dim=max(
                 input_dim - 1, 1
             ),  # One less dim unless already at 1
+            seed=10,
         )
 
         df = prob_over_grid(*dummy_inputs, h=h)
@@ -369,9 +370,9 @@ def test_columns_and_types():
         dummy_inputs = dummy_data(
             grid_mins=np.array(min_bounds[:input_dim]),
             grid_maxes=np.array(max_bounds[:input_dim]),
-            seed=5,
             input_dim=input_dim,
             output_dim=max(input_dim - 1, 1),
+            seed=11,
         )
         df = prob_over_grid(*dummy_inputs, h=3)
         axes_names = ["x", "y", "z"][:input_dim]
@@ -403,20 +404,20 @@ def test_h_one_prob_is_one_many_random_cases():
         (-0.5, 1.5, -0.5, 1.5, -1, 2),
     ]
 
-    for seed in [0, 1, 2, 7]:
+    for seed in [12, 13, 14, 15]:
         # Make N_prior large enough
         for M_obs, N_prior in [(50, 200), (200, 500), (1000, 2000)]:
             for box in boxes:
                 dummy_inputs = dummy_data(
                     grid_mins=np.array(box[::2]),  # even entries
                     grid_maxes=np.array(box[1::2]),  # odd entries
-                    seed=seed,
                     M_obs=M_obs,
                     N_prior=N_prior,
                     input_dim=len(box) // 2,
                     output_dim=max(
                         len(box) // 2 - 1, 1
                     ),  # reduce by 1 or keep at 1
+                    seed=seed,
                 )
                 df = prob_over_grid(*dummy_inputs, h=1)
                 assert len(df) == 1
@@ -439,7 +440,7 @@ def test_probs_sum_to_one_many_random_cases():
         (-0.5, 1.5, -0.5, 1.5, -1, 2),
         (0, 10, 0, 10, -0.1, 11),
     ]
-    for seed in [0, 1, 2, 11]:
+    for seed in [16, 17, 18, 19]:
         for M_obs, N_prior in [(200, 500), (1000, 2000), (2000, 5000)]:
             for h in [1, 2, 3, 5, 6]:  # don't make h large, is expensive
                 for bounds in boxes:

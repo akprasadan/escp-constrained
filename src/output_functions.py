@@ -12,7 +12,7 @@ import numpy as np
 from src.box_functions import check_lambda_bounds
 
 
-def apply_map(points: np.ndarray, Q: Callable) -> np.ndarray:
+def apply_map(points: np.ndarray, Q: Callable[..., np.ndarray]) -> np.ndarray:
     """
     Apply a possibly vector-valued map Q to a set of points, while performing some additional
     input/output validation. Assume input dimension is d, and output dimension is d_out < d.
@@ -101,26 +101,21 @@ def counts_observed(q_data: np.ndarray, bin_edges: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    counts : (M, M, ..., M) shaped (d-many) numpy array of ints
+    counts : (M, M, ..., M) shaped (d-many) numpy array of integers (float type possibly).
         Counts for each bin in each dimension. For d = 1, returns (M, ) shaped array.
     """
-    M = len(bin_edges) - 1
+    M: int = len(bin_edges) - 1
 
-    if len(q_data) == 0:
-        # Temporarily ensure (0, ) arrays are treated as (0, 1) arrays, e.g.
-        # just to get the correct dimension
-        q_data_reshaped = q_data[:, None] if q_data.ndim == 1 else q_data
-        dim = q_data_reshaped.shape[1]
+    q_data_reshaped = q_data[:, None] if q_data.ndim == 1 else q_data
+    dim: int = q_data_reshaped.shape[1]
+
+    if bin_edges.shape[1] != dim:
+        raise ValueError("Bins or data of wrong dimension.")
+
+    if len(q_data_reshaped) == 0:
         return np.zeros((M,) * dim, dtype=np.int64)
 
     # np.histogramdd needs (d, M + 1) bins array input
-    counts, _ = np.histogramdd(q_data, bins=bin_edges.T)
-
-    # Validate that we got integer values
-    if not np.array_equal(counts, np.rint(counts)):
-        raise ValueError("Counts must be integers.")
-
-    # Safely convert to integer now
-    counts = counts.astype(np.int64)
+    counts, _ = np.histogramdd(q_data_reshaped, bins=bin_edges.T)
 
     return counts

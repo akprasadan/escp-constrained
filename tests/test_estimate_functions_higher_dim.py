@@ -24,7 +24,7 @@ XMIN, XMAX, YMIN, YMAX, ZMIN, ZMAX = -8, 8, -8, 8, 0, 1
 class EstimationParams(TypedDict):
     J: int
     M: int
-    Q: Callable
+    Q: Callable[..., np.ndarray]
     grid_mins: np.ndarray
     grid_maxes: np.ndarray
     lambda_grid_size: int
@@ -34,7 +34,7 @@ class EstimationParams(TypedDict):
 FIXED_SCP_PARAMS: EstimationParams = {
     "J": 10000,
     "M": 20,
-    "Q": lambda x, y, z: [x**2 + 3 * y**2 - z, x + z],
+    "Q": lambda x, y, z: np.array([x**2 + 3 * y**2 - z, x + z]),
     "grid_mins": np.array([XMIN, YMIN, ZMIN]),
     "grid_maxes": np.array([XMAX, YMAX, ZMAX]),
     "lambda_grid_size": 10,
@@ -42,28 +42,36 @@ FIXED_SCP_PARAMS: EstimationParams = {
 }
 
 
-def gaussian_tgd(rng, J):
+def gaussian_tgd(rng: np.random.Generator, J: int):
     x = rng.normal(2, 2, size=J)
     y = rng.normal(-1, 1, size=J)
     z = rng.normal(1, 1.5, size=J)
     return np.column_stack((x, y, z))
 
 
-def gaussian_tgd_huge_variance(rng, J):
+def gaussian_tgd_huge_variance(rng: np.random.Generator, J: int):
     x = rng.normal(5, 10, size=J)
     y = rng.normal(-5, 10, size=J)
     z = rng.normal(0, 7, size=J)
     return np.column_stack((x, y, z))
 
 
-def uniform_prior(rng, J):
+def gaussian_tgd_4d(rng: np.random.Generator, J: int):
+    w = rng.normal(0, 1, size=J)
+    x = rng.normal(2, 2, size=J)
+    y = rng.normal(-1, 1, size=J)
+    z = rng.normal(1, 1.5, size=J)
+    return np.column_stack((w, x, y, z))
+
+
+def uniform_prior(rng: np.random.Generator, J: int):
     x = rng.uniform(-5, 5, size=J)
     y = rng.uniform(-5, 5, size=J)
     z = rng.uniform(-5, 5, size=J)
     return np.column_stack((x, y, z))
 
 
-def huge_uniform_prior(rng, J):
+def huge_uniform_prior(rng: np.random.Generator, J: int):
     x = rng.uniform(-20, 20, size=J)
     y = rng.uniform(-20, 20, size=J)
     z = rng.uniform(-20, 20, size=J)
@@ -137,6 +145,20 @@ probs_df_huge_tgd_huge_pr_emp, prior_df_huge_tgd_huge_pr_emp = empirical_scp(
     **FIXED_SCP_PARAMS
 )
 
+# A single 4D --> 1D experiment, to check columns for Lambda (4D) and q (1D)
+probs_df_4D, prior_df_4D, tgd_df_4d = synthetic_scp(
+    K=1000,
+    J=500,
+    M=20,
+    Q=lambda w, x, y, z: (w + x + y + z) / 50,
+    tgd=gaussian_tgd_4d,
+    prior=gaussian_tgd_4d,
+    grid_mins=np.array([-20, -20, -20, -20]),
+    grid_maxes=np.array([20, 20, 20, 20]),
+    lambda_grid_size=10,
+    seed=20251028,
+)
+
 
 def test_estimated_prob_df_structure():
     "Validate prob_df output."
@@ -145,6 +167,11 @@ def test_estimated_prob_df_structure():
         ["xmin", "xmax", "ymin", "ymax", "zmin", "zmax", "prob"]
     )
     assert set(probs_df.columns) == expected_cols
+
+    # 4D version should have different columns
+    assert isinstance(probs_df_4D, pd.DataFrame)
+    expected_cols = set(["mins", "maxes", "prob"])
+    assert set(probs_df_4D.columns) == expected_cols
 
 
 def test_estimated_prob_df_bounds():
@@ -181,12 +208,22 @@ def test_prior_df_structure():
     assert set(prior_df.columns) == {"source", "x", "y", "z", "q_x", "q_y"}
     assert (prior_df["source"] == "prior").all()
 
+    # Check 4D experiment does NOT have those columns
+    assert isinstance(prior_df_4D, pd.DataFrame)
+    assert set(prior_df_4D.columns) == {"source", "lambda", "q_x"}
+    assert (prior_df["source"] == "prior").all()
+
 
 def test_tgd_df_structure():
     "Validate tgd_df output."
     assert isinstance(tgd_df, pd.DataFrame)
     assert set(tgd_df.columns) == {"source", "x", "y", "z", "q_x", "q_y"}
     assert (tgd_df["source"] == "tgd").all()
+
+    # Check 4D experiment does NOT have those columns
+    assert isinstance(tgd_df_4d, pd.DataFrame)
+    assert set(tgd_df_4d.columns) == {"source", "lambda", "q_x"}
+    assert (tgd_df_4d["source"] == "tgd").all()
 
 
 def test_prior_df_q_matches_quadratic():

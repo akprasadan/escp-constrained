@@ -28,6 +28,18 @@ def gaussian_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
     return np.column_stack([x, y])
 
 
+def multivar_gaussian_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
+    """Multivariate Gaussian for 3D data."""
+    mean = [1, 2, 1]
+    cov = [
+        [2, -1, 0],
+        [-1, 2, -1],
+        [0, -1, 2],
+    ]  # eigenvalues all positive
+
+    return rng.multivariate_normal(mean, cov, n)
+
+
 def constant_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
     """
     Fully deterministic distribution of form.
@@ -37,16 +49,27 @@ def constant_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
 
 
 n_list = [1, 5, 20, 50, 200]
-distr_list = [uniform_sampler, gaussian_sampler, constant_sampler]
+distr_list = [
+    uniform_sampler,
+    gaussian_sampler,
+    constant_sampler,
+    multivar_gaussian_sampler,
+]
 
 
 def test_sampler_shapes_and_type():
-    """Each 2D sampler/seed/sample size combo returns (n, 2) array, float dtype,."""
-    for n, distr, seed in product(n_list, distr_list, [0, 1, 2]):
+    """Each sampler/seed/sample size combo returns (n, d) array, float dtype,."""
+    for n, distr, seed in product(n_list, distr_list, [0, 1, 2, 3]):
         pts = sample_distr(n=n, seed=seed, distr=distr)
+
         assert isinstance(pts, np.ndarray)
-        assert pts.shape == (n, 2)
         assert np.issubdtype(pts.dtype, np.floating)
+
+        assert (
+            pts.shape == (n, 3)
+            if distr == multivar_gaussian_sampler
+            else pts.shape == (n, 2)
+        )
 
 
 def test_uniform_sampler_range():
@@ -58,7 +81,12 @@ def test_uniform_sampler_range():
 
 def test_gaussian_and_deterministic_samplers_not_confined_to_01():
     """Gaussian and constant sampler produces array with some values outside [0,1]."""
-    for n, distr in product(n_list, [gaussian_sampler, constant_sampler]):
+    spread_out_samplers = [
+        gaussian_sampler,
+        constant_sampler,
+        multivar_gaussian_sampler,
+    ]
+    for n, distr in product(n_list, spread_out_samplers):
         pts = sample_distr(n=n, seed=2, distr=distr)
         assert np.any((pts < 0) | (pts > 1))
 

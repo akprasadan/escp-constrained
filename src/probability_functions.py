@@ -51,11 +51,8 @@ def probability_input_validation(
         ("prior_A_counts", prior_A_counts),
         ("obs_counts", obs_counts),
     ):
-        ## No longer check that array is 1 dimensional!
-        # if array.ndim != 1:
-        #     raise ValueError(f"{name} is not a 1D array.")
-        if not np.issubdtype(array.dtype, np.integer):
-            raise ValueError(f"{name} must be integer counts.")
+        if not np.array_equal(array, np.rint(array)):
+            raise ValueError(f"{name} array must be integers.")
         if np.any(array < 0):
             raise ValueError(f"{name} cannot contain negative values.")
 

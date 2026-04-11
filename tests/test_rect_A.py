@@ -271,30 +271,30 @@ def test_rect_A_raises_when_bounds_invalid():
     # Min and max values of incorrect length
 
     incompatible_cases = [
-        (np.array([]), np.array([1])),
-        (np.array([0]), np.array([1, 1])),
-        (np.array([1, 1]), np.array([0])),
-        (np.array([0, 0]), np.array([1, 1, 1])),
-        (np.array([0, 0, 0]), np.array([1, 1])),
+        ([], [1]),
+        ([0], [1, 1]),
+        ([1, 1], [5]),
+        ([0, 0], [1, 1, 1]),
+        ([0, 0, 0], [1, 1]),
     ]
 
     for arr1, arr2 in incompatible_cases:
         with pytest.raises(ValueError, match="Incompatible lengths"):
-            rect_A(arr1, arr2)
+            rect_A(np.array(arr1), np.array(arr2))
 
     non_monotonic_cases = [
-        (np.array([1]), np.array([1])),  # Bad x-value in 1D
-        (np.array([2]), np.array([1])),
-        (np.array([1, 0]), np.array([1, 1])),  # Bad x-value in 2D
-        (np.array([2, 0]), np.array([1, 1])),
-        (np.array([0, 1]), np.array([1, 1])),  # Bad y-value in 2D
-        (np.array([0, 2]), np.array([1, 1])),
-        (np.array([1, 0, 0]), np.array([1, 1, 1])),  # Bad x-value in 3D
-        (np.array([2, 0, 0]), np.array([1, 1, 1])),
-        (np.array([0, 0, 1]), np.array([1, 1, 1])),  # Bad z-value in 3D
-        (np.array([0, 0, 2]), np.array([1, 1, 1])),
+        ([1], [1]),  # Bad x-value in 1D
+        ([2], [1]),
+        ([1, 0], [1, 1]),  # Bad x-value in 2D
+        ([2, 0], [1, 1]),
+        ([0, 1], [1, 1]),  # Bad y-value in 2D
+        ([0, 2], [1, 1]),
+        ([1, 0, 0], [1, 1, 1]),  # Bad x-value in 3D
+        ([2, 0, 0], [1, 1, 1]),
+        ([0, 0, 1], [1, 1, 1]),  # Bad z-value in 3D
+        ([0, 0, 2], [1, 1, 1]),
     ]
 
     for arr1, arr2 in non_monotonic_cases:
         with pytest.raises(ValueError, match="min_vals >= max_vals"):
-            rect_A(arr1, arr2)
+            rect_A(np.array(arr1), np.array(arr2))

@@ -112,7 +112,7 @@ def test_prob_A_all_in_A_equals_sum_weights_some_zeros_in_A():
 
 
 def test_prob_A_all_in_A_equals_sum_weights_higher_dim():
-    """Higher_dim: If prior_A_counts == prior_counts for all bins, estimate is 1.
+    """Higher dim: If prior_A_counts == prior_counts for all bins, estimate is 1.
     But every prior_A counts must be 0 for this to occur. Otherwise we miss the proportion
     of obs_counts corresponding to this bin.
     """
@@ -124,7 +124,7 @@ def test_prob_A_all_in_A_equals_sum_weights_higher_dim():
 
 
 def test_prob_A_all_in_A_equals_sum_weights_higher_dim_some_zeros_in_A():
-    """Higher_dim: If prior_A_counts == prior_counts for all bins, estimate is 1.
+    """Higher dim: If prior_A_counts == prior_counts for all bins, estimate is 1.
     But now allow some prior_A counts to be 0. Check this removes the corresponding
     proportion of data.
     """
@@ -138,8 +138,26 @@ def test_prob_A_all_in_A_equals_sum_weights_higher_dim_some_zeros_in_A():
     assert np.isclose(est, 1 - 6 / 45)
 
 
+def test_prob_A_zero_counts_zero_prob():
+    """If prior_counts is 0 everywhere (which also means prior_A_counts is 0),
+    estimate should be 0 regardless.
+    """
+    prior_counts = np.zeros(5, dtype=int)
+    prior_A_counts = np.zeros(5, dtype=int)
+    obs_counts = np.array([2, 3, 5, 1, 2])
+    assert prob_A(prior_counts, prior_A_counts, obs_counts, K=13) == 0
+
+    # Higher dimension:
+    prior_counts = np.zeros((3, 3), dtype=int)
+    prior_A_counts = np.zeros((3, 3), dtype=int)
+    obs_counts = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    est = prob_A(prior_counts, prior_A_counts, obs_counts, K=45)
+    assert est == 0
+
+
 def test_prob_A_none_in_A_zero():
-    """If prior_A_counts == 0 everywhere, estimate should be 0 regardless of weights."""
+    """If prior_A_counts == 0 everywhere (but not necessarily prior_counts),
+    estimate should be 0 regardless of weights."""
     prior_counts = np.array([5, 7, 9])
     prior_A_counts = np.array([0, 0, 0])
     obs_counts = np.array([2, 3, 5])
@@ -148,7 +166,8 @@ def test_prob_A_none_in_A_zero():
 
 
 def test_prob_A_none_in_A_zero_higher_dim():
-    """Higher dim: If prior_A_counts == 0 everywhere, estimate should be 0 regardless of weights."""
+    """Higher dim: If prior_A_counts == 0 everywhere (but not necessarily prior_counts),
+    estimate should be 0 regardless of weights."""
     prior_counts = np.array([[1, 5, 9], [3, 1, 2], [2, 11, 9]])
     prior_A_counts = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
     obs_counts = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
@@ -262,6 +281,20 @@ def test_prob_A_wrong_K_sum_raises_higher_dim():
             match=r"observed q values were not contained in the bin edges",
         ):
             prob_A(prior_counts, prior_A_counts, obs_counts, bad_K)
+
+
+def test_prob_A_bad_counts_raises():
+    """Counts cannot be non-integers or negative."""
+    prior_counts = np.array([5, 1, 0.2])
+    prior_A_counts = np.array([0, 0, 0])
+    obs_counts = np.array([1, 1, 2])
+    with pytest.raises(ValueError, match=r"array must be integers"):
+        prob_A(prior_counts, prior_A_counts, obs_counts, 4)
+
+    """Counts cannot be non-integers or negative."""
+    prior_counts = np.array([5, 1, -2])
+    with pytest.raises(ValueError, match=r"cannot contain negative values."):
+        prob_A(prior_counts, prior_A_counts, obs_counts, 4)
 
 
 def test_prob_A_in_unit_interval_randomized():

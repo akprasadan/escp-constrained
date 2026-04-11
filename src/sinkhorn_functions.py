@@ -39,7 +39,7 @@ from src.output_functions import apply_map
 def compute_cost(
     q: float,
     u: float,
-    Q: Callable,
+    Q: Callable[..., np.ndarray],
     prior: Callable[[np.random.Generator, int], np.ndarray],
     prior_data: np.ndarray | None,
     MC_sample_size: int,
@@ -53,7 +53,7 @@ def compute_cost(
     2. Evaluate |q - Q(lambda_i, u)|^2 for each i
     3. Compute the average value of these evaluations, which approximates c(q, u).
 
-    The user can either pass in a prior_sample directly or input a prior distribution.
+    The user can either pass in a prior sample directly or input a prior distribution.
     """
     # (N, dim(Lambda)) array of prior samples, either using given distribution or
     # direct data input
@@ -84,7 +84,7 @@ def compute_cost(
 def run_sinkhorn(
     q_data: np.ndarray,
     u_data: np.ndarray,
-    Q: Callable,
+    Q: Callable[..., np.ndarray],
     prior: Callable[[np.random.Generator, int], np.ndarray],
     prior_data: np.ndarray | None,
     reg_term: float,

@@ -11,16 +11,40 @@ Tests:
 """
 
 import numpy as np
+import pytest
 
 from src.output_functions import counts_observed
 
 
 def test_counts_observed_basic():
     """Values are counted into bins correctly; last bin includes right edge."""
-    q_data = np.array([0.1, 0.5, 1.2, 1.8, 2])
     bin_edges = np.array([[0], [1], [2], [3]])  # bins: [0,1), [1,2), [2,3]
+
+    q_data = np.array([0.1, 0.5, 1.2, 1.8, 2])
     counts = counts_observed(q_data, bin_edges)
     assert np.allclose(counts, np.array([2, 2, 1]))
+
+    q_data = np.array([0.5, 1.2, 1.8, 2])  # Remove the 0.1 point
+    counts = counts_observed(q_data, bin_edges)
+    assert np.allclose(counts, np.array([1, 2, 1]))
+
+    q_data = np.array([0.5, 1.0, 1.2, 1.8, 1.99, 2])  # add to middle bin
+    counts = counts_observed(q_data, bin_edges)
+    assert np.allclose(counts, np.array([1, 4, 1]))
+
+
+def test_counts_observed_under_permutation():
+    """Permutations should have no impact on the answer."""
+    rng = np.random.default_rng(seed=20251028)
+    bin_edges = np.array([[0], [1], [2], [3]])
+
+    q_data = np.array([-1, 0.1, 0.3, 0.5, 1.2, 1.8, 2])
+    q_data_permuted = rng.permutation(q_data)
+    assert not np.allclose(q_data, q_data_permuted)
+
+    counts = counts_observed(q_data, bin_edges)
+    counts_permuted = counts_observed(q_data_permuted, bin_edges)
+    assert np.allclose(counts, counts_permuted)
 
 
 def test_counts_observed_higher_dim_on_diagonal():
@@ -166,7 +190,7 @@ def test_counts_observed_higher_dim_randomized_add_one_by_one():
     base_q_data = np.column_stack((rng.uniform(0, 3, n), rng.uniform(0, 6, n)))
     base_counts = counts_observed(base_q_data, bin_edges)
 
-    def check_single_added_tile(added_points, expected):
+    def check_single_added_tile(added_points: np.ndarray, expected: np.ndarray):
         q_data = np.vstack([base_q_data, added_points])
         counts = counts_observed(q_data, bin_edges)
         assert np.allclose(counts, expected)
@@ -218,22 +242,55 @@ def test_counts_observed_higher_dim_randomized_add_one_by_one():
 
 
 def test_counts_observed_length_matches_bins():
-    """Output length equals number of bins (len(bin_edges) - 1)."""
+    """1D Output shape is (M, ), where M is number of bins."""
     q_data = np.array([0.1, 0.5, 0.9, 1.5])
     bin_edges = np.array([[0], [0.5], [1], [2]])  # 3 bins
     obs_counts = counts_observed(q_data, bin_edges)
-    assert len(obs_counts) == len(bin_edges) - 1
+    implied_bin_per_axis = len(bin_edges) - 1
+    assert obs_counts.shape == (implied_bin_per_axis,)
 
 
 def test_higher_dim_bin_shape():
-    """Output counts of correct shape."""
+    """2D Output shape is (M, M), where M is number of bins. 3D is (M, M, M)."""
     # Create 3 x 3 grid of bins dividing up [0, 3] x [0, 6]
     # bins: [0, 1) x [0, 2), [0, 1) x [2, 4), [0, 1) x [4, 6]
     # bins: [1, 2) x [0, 2), [1, 2) x [2, 4), [1, 2) x [4, 6]
     # bins: [2, 3] x [0, 2), [2, 3] x [2, 4), [2, 3] x [4, 6]
     bin_edges = np.array([[0, 0], [1, 2], [2, 4], [3, 6]])
-    implied_bin_per_axis = len(bin_edges) - 1
+    bin_per_axis = len(bin_edges) - 1
     q_data = np.array([[2, 4], [2.1, 4.1], [3, 4], [3, 6], [3, 5.9], [2, 6]])
     counts = counts_observed(q_data, bin_edges)
 
-    assert counts.shape == (implied_bin_per_axis, implied_bin_per_axis)
+    assert counts.shape == (bin_per_axis, bin_per_axis)
+
+    # 3D data: (M, M, M)
+    bin_edges = np.array([[0, 0, 0], [1, 2, 2], [2, 4, 3], [3, 6, 10]])
+    bin_per_axis = len(bin_edges) - 1
+    q_data = np.array(
+        [
+            [2, 4, 1],
+            [2.1, 4.1, 2],
+            [3, 4, 8],
+            [3, 6, 10],
+            [3, 5.9, 1],
+            [2, 6, 0],
+        ]
+    )
+    counts = counts_observed(q_data, bin_edges)
+    assert counts.shape == (bin_per_axis, bin_per_axis, bin_per_axis)
+
+
+def test_counts_observed_incompatible_shapes():
+    """Check that incompatible q_data or bin_edges triggers error."""
+    # 2D bin edges with 1D q_data
+    bin_edges = np.array([[0, 0], [1, 2], [2, 4], [3, 6]])
+    q_data = np.array([0.1, 0.5, 0.9, 1.5])
+
+    with pytest.raises(ValueError, match="Bins or data of wrong dimension"):
+        counts_observed(q_data, bin_edges)
+
+    # 1D bin edges with 2D q_data
+    bin_edges = np.array([[0], [0.5], [1], [2]])
+    q_data = np.array([[2, 4], [2.1, 4.1], [3, 4], [3, 6], [3, 5.9], [2, 6]])
+    with pytest.raises(ValueError, match="Bins or data of wrong dimension"):
+        counts_observed(q_data, bin_edges)

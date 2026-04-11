@@ -24,14 +24,37 @@ from src.box_functions import check_lambda_bounds
 
 
 def simplify_low_dimensional_dataframes(
-    df, dim: int, column: str, axis_names: list[str]
+    df: pd.DataFrame, dim: int, column_name: str, axes_names: list[str]
 ) -> pd.DataFrame:
+    """
+    If a dataframe has column comprised of dim-many sub-columns, where dim <= 3,
+    convert them to a more readable format. For example, if lambda is a column
+    of 3D values in Lambda, split it into "x, y, z", and if "q" is a column of 2D values
+    in D, split it into "q_x, q_y". But do not do anything if the dimension is > 3.
+    This will be applied to prior_df or tgd_df. Similar logic for probs_df will be
+    included in src.probability_functions.py::estimate_grid_probs_df() directly.
+
+    Parameters
+    ----------
+    df : Pandas DataFrame
+        Must have a column 'column_name' comprised of lists of length dim.
+    column_name : str
+        Column of df with multivariate values of length dim.
+    axes_names : list[str]
+        List of possible new column names, of length at least larger than dim.
+
+    Returns
+    -------
+    pd.DataFrame
+        New dataframe with split up columns, and original multivariate columns removed.
+    """
 
     if dim > 3:
         return df
-    needed_axis_names = axis_names[:dim]
-    df[needed_axis_names] = df[column].to_list()
-    df = df.drop(columns=column)
+
+    needed_axis_names = axes_names[:dim]
+    df[needed_axis_names] = df[column_name].to_list()
+    df = df.drop(columns=column_name)
 
     return df
 
@@ -40,7 +63,7 @@ def synthetic_scp(
     K: int,
     J: int,
     M: int,
-    Q: Callable,
+    Q: Callable[..., np.ndarray],
     tgd: Callable[[np.random.Generator, int], np.ndarray],
     prior: Callable[[np.random.Generator, int], np.ndarray],
     grid_mins: np.ndarray,
@@ -170,7 +193,7 @@ def empirical_scp(
     q_data: np.ndarray,
     J: int,
     M: int,
-    Q: Callable[[np.ndarray, np.ndarray], np.ndarray],
+    Q: Callable[..., np.ndarray],
     prior: Callable[[np.random.Generator, int], np.ndarray],
     grid_mins: np.ndarray,
     grid_maxes: np.ndarray,

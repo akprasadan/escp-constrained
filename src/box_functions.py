@@ -14,8 +14,8 @@ def check_lambda_bounds(min_vals: np.ndarray, max_vals: np.ndarray) -> None:
 
     Parameters
     ----------
-    mins, maxes : np.ndarray
-        Rectangle bounds; require mins[i] < maxes[i] for each i.
+    min_vals, max_vals : np.ndarray
+        Rectangle bounds; require min_vals[i] < max_vals[i] for each i.
 
     Raises
     --------
