@@ -493,3 +493,30 @@ def test_mask_in_A_excludes_all_points_higher_dim():
     # Remove all points
     expected_prior_A_counts = np.zeros((3, 3))
     assert np.array_equal(prior_A_counts, expected_prior_A_counts)
+
+
+def test_mask_in_A_non_rectangular():
+    """Use an irregular mask on different dimensions. We subset 2D points such that the floor
+    function applied to the first coordinate is even."""
+    rng = np.random.default_rng(seed=20251028)
+    bin_edges = np.array([0, 10, 20, 30])[:, None]
+    q_prior_data = np.array([15, 2, 3, 4, 12, 24, 9, 28])
+    prior_data_x = np.array([1.1, 2.2, 0.1, 2.5, 9.8, 10.0, -0.5, 0.0])
+    prior_data_y = rng.uniform(low=-10, high=50, size=len(prior_data_x))
+    prior_data = np.column_stack([prior_data_x, prior_data_y])
+
+    def A_even(pts):
+        return np.floor(pts[:, 0]) % 2 == 0
+
+    mask_A = mask_in_A(prior_data, A_even)
+    expected = np.array([False, True, True, True, False, True, False, True])
+    assert np.allclose(mask_A, expected)
+
+    prior_counts = counts_observed(q_prior_data, bin_edges)
+    assert np.array_equal(prior_counts, [4, 2, 2])
+
+    # We should remove q_points of 15, 12, and 9, i.e.,
+    # two from middle bin, one from first bin.
+    prior_A_counts = counts_observed(q_prior_data[mask_A], bin_edges)
+    expected_counts = np.array([3, 0, 2])
+    assert np.array_equal(prior_A_counts, expected_counts)

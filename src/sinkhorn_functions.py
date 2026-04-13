@@ -45,7 +45,7 @@ def compute_cost(
 ) -> float:
     """Compute c(q, u) = integral_{Lambda} |q - Q(lambda, u)|^2 p(lambda) dlambda.
 
-    1; We draw 10000 points lambda_i ~ prior (truncated to Lambda).
+    1; We draw MC_sample_size many points lambda_i ~ prior (truncated to Lambda).
     2. Evaluate |q - Q(lambda_i, u)|^2 for each i
     3. Compute the average value of these evaluations, which approximates c(q, u).
 
@@ -56,7 +56,7 @@ def compute_cost(
     u : float
         Value in Q
     Q : Callable[..., np.ndarray]
-        Map from Lambda x U --> D
+        Map from Lambda x U --> D. Not augmented version.
     prior : Callable[[np.random.Generator, int], np.ndarray]
         Distribution of lambda in Lambda to weight cost function by
     lambda_mins, lambda_maxes : (dim(Lambda), ) shaped np.ndarray
@@ -115,7 +115,7 @@ def run_sinkhorn(
     u : (N_2, 1) numpy array
         Array of data in U
     Q : Callable[..., np.ndarray]
-        Map from Lambda x U --> D
+        Map from Lambda x U --> D. Not the augmented version.
     prior : Callable[[np.random.Generator, int], np.ndarray]
         Distribution of lambda in Lambda to weight cost function by
     lambda_mins, lambda_maxes : (dim(Lambda), ) shaped numpy array
@@ -145,7 +145,7 @@ def run_sinkhorn(
     empirical_u = counts_observed(u_data, bin_edges=u_grid)
     empirical_q = counts_observed(q_data, bin_edges=q_grid)
 
-    # Normalize and add small positive number for stability
+    # Add small positive number and normalize for stability
     empirical_u = (empirical_u + 0.0001) / empirical_u.sum()
     empirical_q = (empirical_q + 0.0001) / empirical_q.sum()
 
@@ -205,13 +205,20 @@ def sample_joint_pairs(
     q_sink_samples, u_sink_samples : (sample_size, ) arrays
         Two paired arrays of q and u samples.
     """
+    u_bin_count = len(u_grid) - 1
+    q_bin_count = len(q_grid) - 1
+
+    if sinkhorn_sol.shape != (u_bin_count, q_bin_count):
+        raise ValueError("Sinkhorn solution of wrong dimensions.")
 
     rng = np.random.default_rng(seed=seed)
 
-    # sinkhorn_sol.ravel() converts the 100x100 grid of probabilities
-    # into one 100^2 long probability vector, which use to sample
-    # indices on [1, 2, ..., 100^2], corresponding to rectangles in grid.
-    flattened_sink_idxs = rng.choice(
+    # sinkhorn_sol.ravel() converts a, for example, 100x100 grid of probabilities
+    # into one 100^2 long probability vector, which defines a distribution over
+    # [1, 2, ..., 100^2] from which we sample with replacement.
+    # Each index chosen is a tile from that 100x100 grid, whose indices we extract
+    # using np.unravel_index.
+    flat_idx = rng.choice(
         a=sinkhorn_sol.size,
         size=sample_size,
         replace=True,
@@ -219,9 +226,22 @@ def sample_joint_pairs(
     )
 
     u_sink_idxs, q_sink_idxs = np.unravel_index(
-        flattened_sink_idxs, shape=sinkhorn_sol.shape
+        flat_idx, shape=sinkhorn_sol.shape
     )
+    if len(u_sink_idxs) != len(q_sink_idxs):
+        raise ValueError(
+            "Mismatched number of indices sampled from Sinkhorn solution"
+        )
 
+    if len(u_sink_idxs) != sample_size:
+        raise ValueError(
+            "Invalid quantity of indices sampled from Sinkhorn solution"
+        )
+
+    if q_sink_idxs.max() > q_bin_count or u_sink_idxs.max() > u_bin_count:
+        raise ValueError("Invalid indices sampled from Sinkhorn solution")
+
+    # If a particular tile is chosen, sample uniformly within that tile
     q_sink_samples = rng.uniform(q_grid[q_sink_idxs], q_grid[q_sink_idxs + 1])
     u_sink_samples = rng.uniform(u_grid[u_sink_idxs], u_grid[u_sink_idxs + 1])
 
@@ -233,11 +253,11 @@ def augmented_scp(
     u_data: np.ndarray,
     J: int,
     M: int,
-    Q: Callable[..., np.ndarray],
+    augmented_Q: Callable[..., np.ndarray],
     prior: Callable[[np.random.Generator, int], np.ndarray],
     grid_mins: np.ndarray,
     grid_maxes: np.ndarray,
-    lambda_grid_size: int,
+    input_grid_size: int,
     seed: int | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
@@ -249,16 +269,16 @@ def augmented_scp(
         Number of prior samples to draw on Lambda x U.
     M : int
         Number of bins for partitioning D x U (range of augmented Q).
-    Q : Callable[[np.ndarray, np.ndarray], np.ndarray],
-        Map Q: Lambda x U -> D, called as ``Q(x, y)``. Not the augmented version.
+    augmented_Q : Callable[..., np.ndarray],
+        Augmented map Q: Lambda x U -> D x U, called as ``augmented_Q(x, y, z)``.
     prior : Callable[[np.random.Generator, int], np.ndarray]
         Sampler for the prior distribution on Lambda x U
     grid_mins, grid_maxes : (dim(Lambda) + 1, ) np.ndarray
         Array of bounds for Lambda x U
         Require grid_mins[i] < grid_maxes[i] for each i = 0, 1, ..., dim(Lambda)
-    lambda_grid_size : int
+    input_grid_size : int
         Number of grid bins per axis on Lambda x U
-        (total ``lambda_grid_size**(dim(Lambda) + 1)`` bins).
+        (total ``input_grid_size**(dim(Lambda) + 1)`` bins).
     seed : int or None
         Seed for reproducibility; used to derive independent seeds for TGD and prior.
 
@@ -267,22 +287,26 @@ def augmented_scp(
     probs_df : pandas.DataFrame
         Estimated probabilities on the (Lambda, U) grid tiles.
     prior_df : pandas.DataFrame
-        Prior samples on Lambda x U with `q = Q(lambda, u)` evaluations.
+        Prior samples on Lambda x U with `(q, u) = augmented_Q(lambda, u)` evaluations.
     """
 
-    assert len(q_data) == len(u_data)
+    if len(q_data) != len(u_data):
+        raise ValueError("D and U data have mismatched lengths.")
 
     augmented_q = np.column_stack([q_data, u_data])
+
+    if augmented_q.shape != (len(q_data), 2):
+        raise ValueError("Unexpected shape for augmented Q datapoints.")
 
     prob_df, prior_df = empirical_scp(
         augmented_q,
         J,
         M,
-        Q,
+        augmented_Q,
         prior,
         grid_mins,
         grid_maxes,
-        lambda_grid_size,
+        input_grid_size,
         seed,
     )
 

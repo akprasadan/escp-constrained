@@ -29,7 +29,7 @@ def test_sinkhorn_cost_is_float():
         "prior": fixed_prior_data,
         "lambda_mins": np.array([0, 4]),
         "lambda_maxes": np.array([1, 5]),
-        "MC_sample_size": None,
+        "MC_sample_size": 1,  # will be over-rode by prior_sampler
         "seed": 1,
     }
     cost = compute_cost(Q=lambda x, y, z: x + y - z, **fixed_params)
@@ -61,7 +61,7 @@ def test_sinkhorn_cost_at_0_0_and_uniform_prior():
         "prior": fixed_prior_data,
         "lambda_mins": np.array([0, 0]),
         "lambda_maxes": np.array([1, 1]),
-        "MC_sample_size": None,
+        "MC_sample_size": 1,  # will be over-rode by fixed prior
         "seed": 0,
     }
     cost = compute_cost(Q=lambda x, y, z: x + 0 * y + 2 * z, **fixed_params)
@@ -94,7 +94,7 @@ def test_sinkhorn_cost_not_at_origin_and_uniform_prior():
         "prior": fixed_prior_data,
         "lambda_mins": np.array([0, 0]),
         "lambda_maxes": np.array([1, 1]),
-        "MC_sample_size": None,
+        "MC_sample_size": 1,  # will be over-rode by fixed prior
         "seed": 0,
     }
     cost = compute_cost(
