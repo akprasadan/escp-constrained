@@ -283,20 +283,6 @@ def test_prob_A_wrong_K_sum_raises_higher_dim():
             prob_A(prior_counts, prior_A_counts, obs_counts, bad_K)
 
 
-def test_prob_A_bad_counts_raises():
-    """Counts cannot be non-integers or negative."""
-    prior_counts = np.array([5, 1, 0.2])
-    prior_A_counts = np.array([0, 0, 0])
-    obs_counts = np.array([1, 1, 2])
-    with pytest.raises(ValueError, match=r"array must be integers"):
-        prob_A(prior_counts, prior_A_counts, obs_counts, 4)
-
-    """Counts cannot be non-integers or negative."""
-    prior_counts = np.array([5, 1, -2])
-    with pytest.raises(ValueError, match=r"cannot contain negative values."):
-        prob_A(prior_counts, prior_A_counts, obs_counts, 4)
-
-
 def test_prob_A_in_unit_interval_randomized():
     """Randomized check that result is in [0, 1]."""
     rng = np.random.default_rng(0)

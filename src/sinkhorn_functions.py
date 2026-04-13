@@ -4,24 +4,18 @@ sinkhorn_functions.py
 Given one-dimensional data points q_1, ..., q_n from distribution P_D on D, and u_1, ..., u_m from
 distribution P_U on U, we wish to estimate a joint distribution P_{D,U} using Sinkhorn's algorithm.
 
-Suppose we have some map Q(lambda, u). Define the cost function
-    c(lambda, q, u) = ||q - Q(lambda, u)||.
+Suppose we have some map (lambda, u) --> Q(lambda, u), and let p be a prior on Lambda.
+Define the cost functio:
 
-With Sinkhorn's algorithm, for a fixed lambda and epsilon, we solve
+    c(q, u) = integral_{Lambda} |q - Q(lambda, u)|^2 p(lambda) d lambda
 
-    min_{Pi} integral_D c(lambda, q, u) dPi(q, u) + epsilon * KL(Pi, P_D x P_U)
+With Sinkhorn's algorithm, for a fixed epsilon, we solve
+
+    min_{Pi} integral_{D x U} c(q, u) dPi(q, u) + epsilon * KL(Pi, P_D x P_U)
 
 where Pi ranges over all joint distributions on (D, U) whose marginals in D and U match P_D and P_U,
 respectively, P_D x P_U is the independent coupling of P_D and P_U, KL( , ) is the KL divergence
 of two distributions, and epsilon is some penalty parameter.
-
-However, the lambda is drawn from some random distribution of interest. To incorporate this,
-we consider as a cost function:
-
-    c(q, u) = integral_{Lambda} ||q - Q(lambda, u)|| p(lambda) dlambda,
-
-where p(lambda) is a prior over lambda. Then we solve the Sinkhorn algorithm using this
-cost function instead.
 """
 
 from typing import Callable
@@ -29,11 +23,14 @@ from typing import Callable
 import numpy as np
 import ot
 import ot.plot
-import matplotlib.pylab as pl
+import matplotlib.pyplot as plt
+import pandas as pd
+
 
 from src.box_functions import rect_A
+from src.estimate_functions import empirical_scp
 from src.sampler_functions import sample_distr
-from src.output_functions import apply_map
+from src.output_functions import apply_map, counts_observed, make_partition
 
 
 def compute_cost(
@@ -41,10 +38,9 @@ def compute_cost(
     u: float,
     Q: Callable[..., np.ndarray],
     prior: Callable[[np.random.Generator, int], np.ndarray],
-    prior_data: np.ndarray | None,
-    MC_sample_size: int,
     lambda_mins: np.ndarray,
     lambda_maxes: np.ndarray,
+    MC_sample_size: int,
     seed: int,
 ) -> float:
     """Compute c(q, u) = integral_{Lambda} |q - Q(lambda, u)|^2 p(lambda) dlambda.
@@ -53,29 +49,44 @@ def compute_cost(
     2. Evaluate |q - Q(lambda_i, u)|^2 for each i
     3. Compute the average value of these evaluations, which approximates c(q, u).
 
-    The user can either pass in a prior sample directly or input a prior distribution.
+    Parameters
+    ----------
+    q : float
+        Value in D
+    u : float
+        Value in Q
+    Q : Callable[..., np.ndarray]
+        Map from Lambda x U --> D
+    prior : Callable[[np.random.Generator, int], np.ndarray]
+        Distribution of lambda in Lambda to weight cost function by
+    lambda_mins, lambda_maxes : (dim(Lambda), ) shaped np.ndarray
+        Array of minimums/maximums, respectively, specifying hyper-rectangle in Lambda
+    MC_sample_size : int
+        Number of Monte Carlo samples to use to estimate the integral over Lambda
+    seed : int
+        For reproducibility in prior samples.
+
+    Returns
+    -------
+    weighted_avg_cost : float
+        The value of the cost function c(q, u) at a point (q, u) in D x U.
     """
-    # (N, dim(Lambda)) array of prior samples, either using given distribution or
-    # direct data input
-    prior_sample = (
-        sample_distr(n=MC_sample_size, seed=seed, distr=prior)
-        if prior_data is None
-        else prior_data
-    )
+    # (N, dim(Lambda)) array of prior samples
+    prior_sample = sample_distr(n=MC_sample_size, seed=seed, distr=prior)
 
     # Constrain prior to lie in Lambda
     lambda_bounds_mask = rect_A(lambda_mins, lambda_maxes)
     prior_mask = lambda_bounds_mask(prior_sample)
     prior_sample = prior_sample[prior_mask]
-    len_prior_sample = len(prior_sample)
+    prior_sample_size = len(prior_sample)
 
-    # Package together (lambda, u) for (N, dim(Lambda) + 1) array
-    Q_inputs = np.hstack((prior_sample, np.full((len_prior_sample, 1), u)))
+    # Construct (N, dim(Lambda) + 1) array of (lambda, u) pairs, apply map
+    Q_inputs = np.column_stack(
+        (prior_sample, np.full((prior_sample_size, 1), u))
+    )
     Q_outputs = apply_map(Q_inputs, Q)  # (N, 1)
 
-    # broadcasts q to (N, 1), return (N, 1)
     cost_vals = np.square(q - Q_outputs)
-
     weighted_avg_cost = np.mean(cost_vals, dtype=np.float64)
 
     return weighted_avg_cost
@@ -86,89 +97,233 @@ def run_sinkhorn(
     u_data: np.ndarray,
     Q: Callable[..., np.ndarray],
     prior: Callable[[np.random.Generator, int], np.ndarray],
-    prior_data: np.ndarray | None,
     reg_term: float,
     lambda_mins: np.ndarray,
     lambda_maxes: np.ndarray,
     MC_sample_size: int,
-    grid_sample_size: int,
+    grid_res: int,
     seed: int,
-):
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Run the Sinkhorn algorithm given two unpaired empirical samples from D and U. Result
+    is an empirical probability distribution over D x U corresponding to a joint distribution.
 
-    q_grid = np.linspace(np.min(q_data), np.max(q_data), grid_sample_size)
-    u_grid = np.linspace(np.min(u_data), np.max(u_data), grid_sample_size)
+    Parameters
+    ----------
+    q_data : (N_1, 1) numpy array
+        Array of data in D
+    u : (N_2, 1) numpy array
+        Array of data in U
+    Q : Callable[..., np.ndarray]
+        Map from Lambda x U --> D
+    prior : Callable[[np.random.Generator, int], np.ndarray]
+        Distribution of lambda in Lambda to weight cost function by
+    lambda_mins, lambda_maxes : (dim(Lambda), ) shaped numpy array
+        Array of minimums/maximums, respectively, specifying hyper-rectangle in Lambda
+    MC_sample_size : int
+        Number of Monte Carlo samples to use to estimate the integral over Lambda
+    grid_res : int
+        Number of bins to use along either axis (D or U) to estimate Sinkhorn on
+    seed : int
+        For reproducibility in prior samples.
+
+    Returns
+    --------
+    sinkhorn_sol : (grid_res, grid_res) numpy array
+        Sinkhorn estimate
+    u_grid, q_grid : (grid_res + 1, ) numpy array
+        Bin edges to use for  U or D, respectively
+    empirical_u, empirical_q :(grid_res, ) numpy array
+        Empirical probability distribution for U data and Q data, respectively,
+        over the bins in u_grid, q_grid.
+    """
+
+    u_grid = make_partition(np.min(u_data), np.max(u_data), grid_res)
+    q_grid = make_partition(np.min(q_data), np.max(q_data), grid_res)
 
     # Estimate empirical distribution
-    empirical_q = np.histogram(q_data, bins=grid_sample_size)[0]
-    empirical_u = np.histogram(u_data, bins=grid_sample_size)[0]
+    empirical_u = counts_observed(u_data, bin_edges=u_grid)
+    empirical_q = counts_observed(q_data, bin_edges=q_grid)
 
-    # Normalize for stability
-    empirical_q = empirical_q / empirical_q.sum()
-    empirical_u = empirical_u / empirical_u.sum()
+    # Normalize and add small positive number for stability
+    empirical_u = (empirical_u + 0.0001) / empirical_u.sum()
+    empirical_q = (empirical_q + 0.0001) / empirical_q.sum()
 
     fixed_cost_args = (
         Q,
         prior,
-        prior_data,
-        MC_sample_size,
         lambda_mins,
         lambda_maxes,
+        MC_sample_size,
         seed,
     )
+    # Estimate cost at the bottom-left corner of each bin formed by u_grid x q_grid
     cost_matrix = np.array(
-        [[compute_cost(q, u, *fixed_cost_args) for q in q_grid] for u in u_grid]
+        [
+            [compute_cost(q, u, *fixed_cost_args) for u in u_grid[:grid_res]]
+            for q in q_grid[:grid_res]
+        ]
     )
-
     cost_matrix = cost_matrix / np.sum(cost_matrix)
 
     sinkhorn_sol = ot.sinkhorn(
-        a=empirical_q,
-        b=empirical_u,
+        a=empirical_u,
+        b=empirical_q,
         M=cost_matrix,
         reg=reg_term,
         verbose=False,
     )
 
-    sinkhorn_sol = sinkhorn_sol / sinkhorn_sol.sum()
+    sinkhorn_sol = sinkhorn_sol / sinkhorn_sol.sum()  # type: ignore
 
-    pl.figure(figsize=(5, 5))
-    ot.plot.plot1D_mat(
-        empirical_q,
-        empirical_u,
-        sinkhorn_sol,
-        title="Sinkorn Solution",
-        a_label="D",
-        b_label="U",
+    return sinkhorn_sol, u_grid, q_grid, empirical_u, empirical_q
+
+
+def sample_joint_pairs(
+    sinkhorn_sol: np.ndarray,
+    u_grid: np.ndarray,
+    q_grid: np.ndarray,
+    sample_size: int,
+    seed: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Sample pairs (q, u) from the joint distribution on D x U estimated by Sinkhorn's algorithm.
+
+    Parameters
+    -----------
+    sinkhorn_sol : (grid_res, grid_res) numpy array
+        Sinkhorn estimate, where grid_res was chosen in Sinkhorn algorithm.
+    u_grid, q_grid : (grid_res + 1, ) numpy array
+        Bin edges to use for  U or D.
+    sample_size : int
+        Number of joint pairs (q, u) to draw
+    seed : int
+        For reproducible sampling from Sinkhorn estimate.
+
+    Returns
+    --------
+    q_sink_samples, u_sink_samples : (sample_size, ) arrays
+        Two paired arrays of q and u samples.
+    """
+
+    rng = np.random.default_rng(seed=seed)
+
+    # sinkhorn_sol.ravel() converts the 100x100 grid of probabilities
+    # into one 100^2 long probability vector, which use to sample
+    # indices on [1, 2, ..., 100^2], corresponding to rectangles in grid.
+    flattened_sink_idxs = rng.choice(
+        a=sinkhorn_sol.size,
+        size=sample_size,
+        replace=True,
+        p=sinkhorn_sol.ravel(),
     )
 
-    pl.show()
+    u_sink_idxs, q_sink_idxs = np.unravel_index(
+        flattened_sink_idxs, shape=sinkhorn_sol.shape
+    )
+
+    q_sink_samples = rng.uniform(q_grid[q_sink_idxs], q_grid[q_sink_idxs + 1])
+    u_sink_samples = rng.uniform(u_grid[u_sink_idxs], u_grid[u_sink_idxs + 1])
+
+    return q_sink_samples, u_sink_samples
 
 
-if __name__ == "__main__":
-    mean = [2, 2]
-    cov = [[1, 0], [0, 20]]
-    lambda_data = np.random.multivariate_normal(mean, cov, 5000)
-    u_data = np.random.normal(-1, 10, 5000)
-    lambda_u_data = np.hstack((lambda_data, u_data[:, None]))
-    Q = lambda x, y, z: x**2 + y**2 + z
-    q_data = apply_map(lambda_u_data, Q)
+def augmented_scp(
+    q_data: np.ndarray,
+    u_data: np.ndarray,
+    J: int,
+    M: int,
+    Q: Callable[..., np.ndarray],
+    prior: Callable[[np.random.Generator, int], np.ndarray],
+    grid_mins: np.ndarray,
+    grid_maxes: np.ndarray,
+    lambda_grid_size: int,
+    seed: int | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Parameters
+    ----------
+    q_data, u_data : (N, 1) numpy array
+        Paired arrays of data in D and U, respectively
+    J : int
+        Number of prior samples to draw on Lambda x U.
+    M : int
+        Number of bins for partitioning D x U (range of augmented Q).
+    Q : Callable[[np.ndarray, np.ndarray], np.ndarray],
+        Map Q: Lambda x U -> D, called as ``Q(x, y)``. Not the augmented version.
+    prior : Callable[[np.random.Generator, int], np.ndarray]
+        Sampler for the prior distribution on Lambda x U
+    grid_mins, grid_maxes : (dim(Lambda) + 1, ) np.ndarray
+        Array of bounds for Lambda x U
+        Require grid_mins[i] < grid_maxes[i] for each i = 0, 1, ..., dim(Lambda)
+    lambda_grid_size : int
+        Number of grid bins per axis on Lambda x U
+        (total ``lambda_grid_size**(dim(Lambda) + 1)`` bins).
+    seed : int or None
+        Seed for reproducibility; used to derive independent seeds for TGD and prior.
 
-    lambda_mins = lambda_data.min(axis=0)
-    lambda_maxes = lambda_data.max(axis=0)
+    Returns
+    -------
+    probs_df : pandas.DataFrame
+        Estimated probabilities on the (Lambda, U) grid tiles.
+    prior_df : pandas.DataFrame
+        Prior samples on Lambda x U with `q = Q(lambda, u)` evaluations.
+    """
 
-    def uniform_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
-        return rng.uniform(lambda_mins, lambda_maxes, size=(n, 2))
+    assert len(q_data) == len(u_data)
 
-    run_sinkhorn(
-        q_data,
-        u_data,
+    augmented_q = np.column_stack([q_data, u_data])
+
+    prob_df, prior_df = empirical_scp(
+        augmented_q,
+        J,
+        M,
         Q,
-        prior=uniform_sampler,
-        prior_data=None,
-        reg_term=0.001,
-        lambda_mins=lambda_mins,
-        lambda_maxes=lambda_maxes,
-        MC_sample_size=10000,
-        grid_sample_size=100,
-        seed=1,
+        prior,
+        grid_mins,
+        grid_maxes,
+        lambda_grid_size,
+        seed,
     )
+
+    return prob_df, prior_df
+
+
+def plot_sinkhorn(
+    sinkhorn_sol: np.ndarray,
+    empirical_u: np.ndarray,
+    empirical_q: np.ndarray,
+    q_sink_samples: np.ndarray,
+    u_sink_samples: np.ndarray,
+    u_edges: np.ndarray,
+    q_edges: np.ndarray,
+) -> None:
+
+    ot.plot.plot1D_mat(
+        a=empirical_u,
+        b=empirical_q,
+        M=sinkhorn_sol,
+        title="Cost matrix M",
+        plot_style="xy",
+        a_label="U",
+        b_label="D",
+    )
+
+    H, _, _ = np.histogram2d(
+        u_sink_samples, q_sink_samples, bins=[u_edges, q_edges]
+    )
+    H = H / H.sum()
+
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
+    ax[0].pcolormesh(u_edges, q_edges, H.T, shading="auto", cmap="viridis")
+
+    ax[0].set_title("Sampled from joint")
+
+    ax[1].pcolormesh(
+        u_edges, q_edges, sinkhorn_sol.T, shading="auto", cmap="viridis"
+    )
+
+    ax[1].set_title("Sinkhorn Solution")
+    plt.tight_layout()
+    plt.show()
+    plt.close()

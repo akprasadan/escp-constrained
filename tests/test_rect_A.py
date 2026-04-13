@@ -15,7 +15,7 @@ import pytest
 from itertools import product
 
 
-from src.box_functions import rect_A
+from src.box_functions import rect_A, rect_A_kernel
 
 
 # [0, 1)
@@ -296,5 +296,35 @@ def test_rect_A_raises_when_bounds_invalid():
     ]
 
     for arr1, arr2 in non_monotonic_cases:
-        with pytest.raises(ValueError, match="min_vals >= max_vals"):
+        with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
             rect_A(np.array(arr1), np.array(arr2))
+
+
+def test_rect_A_numba():
+    """Check that the numba logic is returning same thing as overall function."""
+    rng = np.random.default_rng(seed=20251028)
+    dim = 3
+    N = 1000
+    points = rng.uniform(low=-5, high=25, size=(N, dim))
+    grid_mins = rng.uniform(0, 1, size=dim)
+    grid_maxes = rng.uniform(10, 20, size=dim)
+    # Use py_func to not use jit compiled version for accurate code coverage report
+    numba_mask = rect_A_kernel.py_func(  # type: ignore[attr-defined]
+        points, grid_mins, grid_maxes
+    )
+    mask_from_rect_A = rect_A(grid_mins, grid_maxes)(points)
+    assert np.allclose(mask_from_rect_A, numba_mask)
+
+    rng = np.random.default_rng(seed=20251028)
+    dim = 1
+    N = 1000
+    points = rng.uniform(low=-5, high=25, size=N)  # Note not of size (N, 1)
+    grid_mins = rng.uniform(0, 1, size=1)
+    grid_maxes = rng.uniform(10, 20, size=1)
+    numba_mask = rect_A_kernel.py_func(  # type: ignore[attr-defined]
+        points[:, None], grid_mins, grid_maxes
+    )
+
+    # Note we didn't convert to (N, 1)
+    mask_from_rect_A = rect_A(grid_mins, grid_maxes)(points)
+    assert np.allclose(mask_from_rect_A, numba_mask)

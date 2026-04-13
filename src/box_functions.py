@@ -7,31 +7,32 @@ Helper functions to grid up the input space into sub-rectangles and subset point
 from collections.abc import Callable
 
 import numpy as np
+from numba import njit
 
 
-def check_lambda_bounds(min_vals: np.ndarray, max_vals: np.ndarray) -> None:
-    """Utility function that validates input bounds in Lambda (or D) space.
+def check_grid_bounds(grid_mins: np.ndarray, grid_maxes: np.ndarray) -> None:
+    """Utility function that validates input bounds of hyper-rectangle, usually
+    either Lambda or D.
 
     Parameters
     ----------
-    min_vals, max_vals : np.ndarray
-        Rectangle bounds; require min_vals[i] < max_vals[i] for each i.
+    grid_mins, grid_maxes : np.ndarray
+        Rectangle bounds; require grid_mins[i] < grid_maxes[i] for each i.
 
     Raises
     --------
     ValueError : If bounds are invalid.
     """
 
-    d = len(min_vals)
+    d = len(grid_mins)
 
-    if d != len(max_vals):
+    if d != len(grid_maxes):
         raise ValueError(
-            "Incompatible lengths (dimension) for min_vals and max_vals."
+            "Incompatible lengths (dimension) for grid_mins and grid_maxes."
         )
 
-    for i in range(d):
-        if not (min_vals[i] < max_vals[i]):
-            raise ValueError(f"min_vals >= max_vals for dimension {i}.")
+    if np.any(grid_mins >= grid_maxes):
+        raise ValueError(f"grid_mins >= grid_maxes for some dimension.")
 
 
 def mask_in_A(
@@ -70,8 +71,41 @@ def mask_in_A(
     return A(points)
 
 
+@njit
+def rect_A_kernel(
+    points: np.ndarray, grid_mins: np.ndarray, grid_maxes: np.ndarray
+) -> np.ndarray:
+    """Returns a numpy array of boolean values, indicating if each element of points
+    is within the hyper-rectangle specified by grid_mins and grid_maxes. It is written
+    using for loops to work with numba for 2-3x speed-up versus using, say,
+    np.all(mask, axis = 1).
+
+    Parameters
+    ----------
+    points : (N, d) numpy array
+        Array of N d-dimensional points to test for membership.
+    grid_mins, grid_maxes : np.ndarray
+        Rectangle bounds; require grid_mins[i] < grid_maxes[i] for each i.
+
+    Returns
+    -------
+    mask : (N, ) numpy array of dtype bool
+        Boolean mask where True indicates the corresponding point is in the hyper-rectangle.
+    """
+    n, d = points.shape
+    out = np.ones(n, dtype=np.bool)
+
+    for i in range(n):
+        for j in range(d):
+            point = points[i, j]
+            if point < grid_mins[j] or point >= grid_maxes[j]:
+                out[i] = False
+                break
+    return out
+
+
 def rect_A(
-    mins: np.ndarray, maxes: np.ndarray
+    grid_mins: np.ndarray, grid_maxes: np.ndarray
 ) -> Callable[[np.ndarray], np.ndarray]:
     """
     Produce d-dimensional rectangular mask with half-open bounds:
@@ -81,8 +115,8 @@ def rect_A(
 
     Parameters
     ----------
-    mins, maxes : np.ndarray
-        Rectangle bounds; require mins[i] < maxes[i] for each i.
+    grid_mins, grid_maxes : np.ndarray
+        Rectangle bounds; require grid_mins[i] < grid_maxes[i] for each i.
 
     Returns
     -------
@@ -92,11 +126,13 @@ def rect_A(
         whether each point belongs to the rectangle.
     """
     # Check we input valid bounds
-    check_lambda_bounds(mins, maxes)
+    check_grid_bounds(grid_mins, grid_maxes)
 
-    def _A(points: np.ndarray) -> np.ndarray:
-        # Make sure (N, ) points are treated as (N, 1)
-        points_new = points[:, None] if points.ndim == 1 else points
-        return np.all((points_new >= mins) & (points_new < maxes), axis=1)
+    def _A(points):
+        # (N, ) points should be (N, 1)
+        if points.ndim == 1:
+            points = points[:, None]
+        # Use numba sped-up version
+        return rect_A_kernel(points, grid_mins, grid_maxes)
 
     return _A

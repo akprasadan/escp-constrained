@@ -9,7 +9,7 @@ from collections.abc import Callable
 
 import numpy as np
 
-from src.box_functions import check_lambda_bounds
+from src.box_functions import check_grid_bounds
 
 
 def apply_map(points: np.ndarray, Q: Callable[..., np.ndarray]) -> np.ndarray:
@@ -35,29 +35,29 @@ def apply_map(points: np.ndarray, Q: Callable[..., np.ndarray]) -> np.ndarray:
         raise ValueError("points must be non-empty.")
 
     # Make sure (N, ) arrays are treated as (N, 1)
-    points_new = points[:, None] if points.ndim == 1 else points
+    points = points[:, None] if points.ndim == 1 else points
 
-    q = np.asarray(Q(*points_new.T), dtype=float).T
+    q = np.asarray(Q(*points.T), dtype=float).T
 
     #  Make sure (N, ) arrays are treated as (N, 1)
     q = q[:, None] if q.ndim == 1 else q
 
-    if len(q) != len(points_new):
+    if len(q) != len(points):
         raise RuntimeError("Q(x, y) must have same length as 'points'.")
 
     return q
 
 
 def make_partition(
-    min_vals: np.ndarray, max_vals: np.ndarray, M: int
+    grid_mins: np.ndarray, grid_maxes: np.ndarray, M: int
 ) -> np.ndarray:
     """
     Along axis i of d-dimensions, build `M + 1` equal-width bin edges spanning
-    [`min_vals[i]`, `max_vals[i]`].
+    [`grid_mins[i]`, `grid_maxes[i]`].
 
     Parameters
     ----------
-    min_vals, max_vals : (d, ) np.ndarray
+    grid_mins, grid_maxes : (d, ) np.ndarray
         Lower and upper bound of the range (inclusive) for each of d dimensions.
         Must satisfy `min_val[i] < max_val[i]` for each dimension i.
     M : int
@@ -74,15 +74,16 @@ def make_partition(
 
     # Make sure mins/max values of right length, orientation
     # Floats should be packed into arrays
-    if isinstance(min_vals, float):
-        min_vals = np.array([min_vals])
-        max_vals = np.array([max_vals])
+    if isinstance(grid_mins, float):
+        grid_mins = np.array([grid_mins])
+        grid_maxes = np.array([grid_maxes])
 
-    check_lambda_bounds(min_vals, max_vals)
+    check_grid_bounds(grid_mins, grid_maxes)
 
     unscaled_partition = np.linspace(0, 1, M + 1)
     partition_all_dimensions = (
-        min_vals[:, None] + (max_vals - min_vals)[:, None] * unscaled_partition
+        grid_mins[:, None]
+        + (grid_maxes - grid_mins)[:, None] * unscaled_partition
     )
     return partition_all_dimensions.T
 
@@ -104,18 +105,39 @@ def counts_observed(q_data: np.ndarray, bin_edges: np.ndarray) -> np.ndarray:
     counts : (M, M, ..., M) shaped (d-many) numpy array of integers (float type possibly).
         Counts for each bin in each dimension. For d = 1, returns (M, ) shaped array.
     """
-    M: int = len(bin_edges) - 1
+    bin_edges_len, bin_edges_dim = bin_edges.shape
+    M = bin_edges_len - 1
 
-    q_data_reshaped = q_data[:, None] if q_data.ndim == 1 else q_data
-    dim: int = q_data_reshaped.shape[1]
+    q_data = q_data[:, None] if q_data.ndim == 1 else q_data
+    q_data_len, q_data_dim = q_data.shape
 
-    if bin_edges.shape[1] != dim:
+    if bin_edges_dim != q_data_dim:
         raise ValueError("Bins or data of wrong dimension.")
 
-    if len(q_data_reshaped) == 0:
-        return np.zeros((M,) * dim, dtype=np.int64)
+    if q_data_len == 0:
+        return np.zeros((M,) * q_data_dim, dtype=np.int64)
 
     # np.histogramdd needs (d, M + 1) bins array input
-    counts, _ = np.histogramdd(q_data_reshaped, bins=bin_edges.T)
+    counts, _ = np.histogramdd(q_data, bins=bin_edges.T)
 
     return counts
+
+
+def counts_validation(counts: np.ndarray) -> None:
+    """
+    Check that the output of counts_observed are non-negative integers. The
+    dtype can be a float, but the float must be an integer, e.g., 5.0.
+
+    Parameters
+    -----------
+    counts : np.ndarray
+        (M, ) or (M, M, ..., M) d-times shaped array of counts
+
+    Raises
+    -------
+    ValueError if any entry of counts is negative or not an integer.
+    """
+    if not np.array_equal(counts, np.rint(counts)):
+        raise ValueError(f"counts array must be integers.")
+    if np.any(counts < 0):
+        raise ValueError(f"counts array cannot contain negative values.")

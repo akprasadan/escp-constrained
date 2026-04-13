@@ -14,16 +14,19 @@ def uniform_prior(rng, J):
     return np.column_stack((x, y))
 
 
+def fixed_prior_data(rng, J):
+    prior_data = sample_distr(n=10_000_000, seed=20251028, distr=uniform_prior)
+    return prior_data
+
+
 # We'll use the same prior data everywhere to save on computation
-PRIOR_DATA = sample_distr(n=10_000_000, seed=20251028, distr=uniform_prior)
 
 
 def test_sinkhorn_cost_is_float():
     fixed_params = {
         "q": 1.5,
         "u": 1,
-        "prior": None,
-        "prior_data": PRIOR_DATA,
+        "prior": fixed_prior_data,
         "lambda_mins": np.array([0, 4]),
         "lambda_maxes": np.array([1, 5]),
         "MC_sample_size": None,
@@ -55,8 +58,7 @@ def test_sinkhorn_cost_at_0_0_and_uniform_prior():
     fixed_params = {
         "q": 0,
         "u": 0,
-        "prior": None,
-        "prior_data": PRIOR_DATA,
+        "prior": fixed_prior_data,
         "lambda_mins": np.array([0, 0]),
         "lambda_maxes": np.array([1, 1]),
         "MC_sample_size": None,
@@ -89,8 +91,7 @@ def test_sinkhorn_cost_not_at_origin_and_uniform_prior():
     Integral is int_0^1 int_0^1 (5 - (-2x + 2y))^2 dx dy = 77/3.
     """
     fixed_params = {
-        "prior": None,
-        "prior_data": PRIOR_DATA,
+        "prior": fixed_prior_data,
         "lambda_mins": np.array([0, 0]),
         "lambda_maxes": np.array([1, 1]),
         "MC_sample_size": None,

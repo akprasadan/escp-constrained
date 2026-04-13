@@ -47,8 +47,8 @@ def dummy_data(
     q_prior_data = rng.random((N_prior, output_dim))  # Over [0, 1]^output_dim
     # Use bin edges on [-0.1, 1.1]^output_dim
     bin_edges = make_partition(
-        min_vals=-0.1 * np.ones(output_dim),
-        max_vals=1.1 * np.ones(output_dim),
+        grid_mins=-0.1 * np.ones(output_dim),
+        grid_maxes=1.1 * np.ones(output_dim),
         M=5,
     )
 
@@ -107,7 +107,7 @@ def test_invalid_inputs_raise():
     ]
 
     for bad_dummy in invalid_dummy_data:
-        with pytest.raises(ValueError, match="min_vals >= max_vals"):
+        with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
             prob_over_grid(*bad_dummy, h=2)
 
     invalid_hs = [0, -3, 1.5, "4"]

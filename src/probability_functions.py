@@ -9,14 +9,14 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from src.output_functions import make_partition
+from src.output_functions import counts_validation, make_partition
 from src.output_functions import counts_observed
 from src.box_functions import mask_in_A
 from src.box_functions import rect_A
-from src.box_functions import check_lambda_bounds
+from src.box_functions import check_grid_bounds
 
 
-def probability_input_validation(
+def prob_input_validation(
     prior_counts: np.ndarray,
     prior_A_counts: np.ndarray,
     obs_counts: np.ndarray,
@@ -45,16 +45,6 @@ def probability_input_validation(
     """
     if not (prior_counts.shape == prior_A_counts.shape == obs_counts.shape):
         raise ValueError("Incompatible array shapes.")
-
-    for name, array in (
-        ("prior_counts", prior_counts),
-        ("prior_A_counts", prior_A_counts),
-        ("obs_counts", obs_counts),
-    ):
-        if not np.array_equal(array, np.rint(array)):
-            raise ValueError(f"{name} array must be integers.")
-        if np.any(array < 0):
-            raise ValueError(f"{name} cannot contain negative values.")
 
     if np.any(prior_A_counts > prior_counts):
         raise ValueError("prior_A_counts > prior_counts.")
@@ -111,7 +101,7 @@ def prob_A(
         The estimate of the SCP solution probability for a particular A
     """
     # Check if inputs are valid
-    probability_input_validation(prior_counts, prior_A_counts, obs_counts, K)
+    prob_input_validation(prior_counts, prior_A_counts, obs_counts, K)
 
     # Avoid division by 0
     mask = prior_counts > 0
@@ -161,7 +151,7 @@ def prob_over_grid(
     pandas.DataFrame with 5 columns ['xmin','xmax','ymin','ymax','prob'] and h^2 rows.
     """
     # First some basic input validation
-    check_lambda_bounds(grid_mins, grid_maxes)
+    check_grid_bounds(grid_mins, grid_maxes)
     input_dim = prior_data.shape[1]
     assert len(grid_mins) == input_dim
 
@@ -172,10 +162,13 @@ def prob_over_grid(
 
     obs_counts = counts_observed(q_data, bin_edges)
     prior_counts = counts_observed(q_prior_data, bin_edges)
+    counts_validation(obs_counts)
+    counts_validation(prior_counts)
+
     K = len(q_data)
 
     edges = make_partition(grid_mins, grid_maxes, h)
-    # inside np.ndindex, we basically pass in (h, h, ..., h) in R^d
+    # inside np.ndindex, we pass in (h, h, ..., h) in R^d
     # Then we get all indices in the box, i.e., elements of {0, 1, ..., h-1}^d
     # Then we loop over each one. We extract the bin_edges at that index
     rows = []
@@ -190,6 +183,8 @@ def prob_over_grid(
         mask_A = mask_in_A(prior_data, A)
         q_prior_counts_A = q_prior_data[mask_A]
         prior_A_counts = counts_observed(q_prior_counts_A, bin_edges)
+        counts_validation(prior_A_counts)
+
         p_A = prob_A(prior_counts, prior_A_counts, obs_counts, K)
         rows.append({"mins": tile_mins, "maxes": tile_maxes, "prob": p_A})
 

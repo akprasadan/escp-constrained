@@ -8,12 +8,13 @@ Tests:
 - When all values fall in the last bin
 - Output is of correct shape
 - Adding tile by tile increases counts correctly
+- Our counts validator works correctly
 """
 
 import numpy as np
 import pytest
 
-from src.output_functions import counts_observed
+from src.output_functions import counts_observed, counts_validation
 
 
 def test_counts_observed_basic():
@@ -294,3 +295,23 @@ def test_counts_observed_incompatible_shapes():
     q_data = np.array([[2, 4], [2.1, 4.1], [3, 4], [3, 6], [3, 5.9], [2, 6]])
     with pytest.raises(ValueError, match="Bins or data of wrong dimension"):
         counts_observed(q_data, bin_edges)
+
+
+# This function used to be checked in prob_A, now is checked in estimate_grid_probs_df
+def test_counts_validation_bad_counts_raises():
+    """Counts cannot be non-integers or negative."""
+    counts = np.array([5, 1, 0.2])
+    with pytest.raises(ValueError, match=r"array must be integers"):
+        counts_validation(counts)
+
+    counts = np.array([5, 1, -2])
+    with pytest.raises(ValueError, match=r"cannot contain negative values."):
+        counts_validation(counts)
+
+    counts = np.array([[1, 2, 3], [3, -1, 5], [6, 1, 2]])
+    with pytest.raises(ValueError, match=r"cannot contain negative values."):
+        counts_validation(counts)
+
+    counts = np.array([[1, 2, 3], [3.1, 1, 5], [6, 1, 2]])
+    with pytest.raises(ValueError, match=r"array must be integers."):
+        counts_validation(counts)

@@ -20,10 +20,10 @@ from src.sampler_functions import sample_distr
 from src.output_functions import make_partition
 from src.output_functions import apply_map
 from src.box_functions import rect_A
-from src.box_functions import check_lambda_bounds
+from src.box_functions import check_grid_bounds
 
 
-def simplify_low_dimensional_dataframes(
+def simplify_low_dim_dfs(
     df: pd.DataFrame, dim: int, column_name: str, axes_names: list[str]
 ) -> pd.DataFrame:
     """
@@ -99,7 +99,7 @@ def synthetic_scp(
         Array of bounds for Lambda.
         Require grid_mins[i] < grid_maxes[i] for each i = 0, 1, ..., d_L - 1
     lambda_grid_size : int
-        Number of grid bins per axis on Lambda (total ``lambda_grid_size**2`` tiles).
+        Number of grid bins per axis on Lambda (total ``lambda_grid_size**dim(Lambda)`` bins).
     seed : int or None
         Seed for reproducibility; used to derive independent seeds for TGD and prior.
 
@@ -112,7 +112,7 @@ def synthetic_scp(
     tgd_df : pandas.DataFrame
         TGD samples on Lambda with their `q = Q(lambda)`.
     """
-    check_lambda_bounds(grid_mins, grid_maxes)
+    check_grid_bounds(grid_mins, grid_maxes)
 
     # Obtain independent seeds for TGD and prior
     master_seed = np.random.default_rng(seed)
@@ -165,10 +165,10 @@ def synthetic_scp(
     )
     input_dim = prior_data.shape[1]
     output_dim = q_prior_data.shape[1]
-    prior_df = simplify_low_dimensional_dataframes(
+    prior_df = simplify_low_dim_dfs(
         prior_df, input_dim, "lambda", ["x", "y", "z"]
     )
-    prior_df = simplify_low_dimensional_dataframes(
+    prior_df = simplify_low_dim_dfs(
         prior_df, output_dim, "q", ["q_x", "q_y", "q_z"]
     )
 
@@ -179,10 +179,8 @@ def synthetic_scp(
             "q": list(q_data),
         }
     )
-    tgd_df = simplify_low_dimensional_dataframes(
-        tgd_df, input_dim, "lambda", ["x", "y", "z"]
-    )
-    tgd_df = simplify_low_dimensional_dataframes(
+    tgd_df = simplify_low_dim_dfs(tgd_df, input_dim, "lambda", ["x", "y", "z"])
+    tgd_df = simplify_low_dim_dfs(
         tgd_df, output_dim, "q", ["q_x", "q_y", "q_z"]
     )
 
@@ -237,7 +235,7 @@ def empirical_scp(
     prior_df : pandas.DataFrame
         Prior samples on Lambda with their `q = Q(lambda)`.
     """
-    check_lambda_bounds(grid_mins, grid_maxes)
+    check_grid_bounds(grid_mins, grid_maxes)
 
     # Prior seed only (TGD is empirical here)
     master = np.random.default_rng(seed)
@@ -249,7 +247,6 @@ def empirical_scp(
 
     # 1) Partition q_data into M bins
     # May need to add some wiggle room here in the np.max value.
-
     q_mins, q_maxes = np.min(q_data, axis=0), np.max(q_data, axis=0)
     bin_edges = make_partition(q_mins, q_maxes, M)
 
@@ -285,10 +282,10 @@ def empirical_scp(
     )
     input_dim = prior_data.shape[1]
     output_dim = q_prior_data.shape[1]
-    prior_df = simplify_low_dimensional_dataframes(
+    prior_df = simplify_low_dim_dfs(
         prior_df, input_dim, "lambda", ["x", "y", "z"]
     )
-    prior_df = simplify_low_dimensional_dataframes(
+    prior_df = simplify_low_dim_dfs(
         prior_df, output_dim, "q", ["q_x", "q_y", "q_z"]
     )
 
