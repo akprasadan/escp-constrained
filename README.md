@@ -1,5 +1,4 @@
-This repository implements the eSCP algorithm given in [^1] for an up to 3-dimensional input space
-and up to 2-dimensional output space.
+This repository implements the eSCP algorithm given in [^1] for arbitrary dimensional input and output spaces, generalizing code in [another repository](https://github.com/akprasadan/escp-continuity.git) authored by myself for the purpose of a recent paper. Moreover, this repo implements the constrained eSCP logic from a forthcoming paper, involving Sinkhorn's algorithm and an augmented forward map to invert.
 
 [^1]: Shi, H., Yang, L., Chi, J., Butler, T., Wang, H., Bingham, D., & Estep, D. (2025). Nonparametric Bayesian Calibration of Computer Models. *arXiv preprint arXiv:2509.22597.*
 
@@ -11,7 +10,7 @@ and up to 2-dimensional output space.
 
         git clone https://github.com/akprasadan/escp-constrained.git
 
-        cd escp-continuity
+        cd escp-constrained
 
 3. Install the project and its dependencies.
 
@@ -21,7 +20,7 @@ and up to 2-dimensional output space.
 
 Now you can run modules with **uv** in a virtual environment, e.g., 
 
-        uv run python -m src.estimate_fucntions
+        uv run python -m src.estimate_functions
 
 You can also run all unit tests.
 
