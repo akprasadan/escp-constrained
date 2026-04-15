@@ -22,8 +22,10 @@ def apply_map(points: np.ndarray, Q: Callable[..., np.ndarray]) -> np.ndarray:
     points : (N, d) ndarray
         Array of N points with d dimensions.
     Q : Callable
-        Function that accepts `points` and returns an array of length N.
-        Example: `Q = lambda x, y, z: [x**2 + y**2 - z, x + z]`
+        Function that accepts `points` and returns an numpy array of length N. If
+        real-valued, a float can be returned instead.
+        Example: `Q = lambda x, y, z: np.array([x**2 + y**2 - z, x + z])`
+                or `Q = lambda x, y: x - y`
 
     Returns
     -------

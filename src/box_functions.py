@@ -130,8 +130,7 @@ def rect_A(
 
     def _A(points):
         # (N, ) points should be (N, 1)
-        if points.ndim == 1:
-            points = points[:, None]
+        points = points[:, None] if points.ndim == 1 else points
         # Use numba sped-up version
         return rect_A_kernel(points, grid_mins, grid_maxes)
 

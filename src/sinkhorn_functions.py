@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-from src.box_functions import rect_A
+from src.box_functions import check_grid_bounds, rect_A
 from src.estimate_functions import empirical_scp
 from src.sampler_functions import sample_distr
 from src.output_functions import apply_map, counts_observed, make_partition
@@ -71,20 +71,25 @@ def compute_cost(
     weighted_avg_cost : float
         The value of the cost function c(q, u) at a point (q, u) in D x U.
     """
+
     # (N, dim(Lambda)) array of prior samples
     prior_sample = sample_distr(n=MC_sample_size, seed=seed, distr=prior)
 
-    # Constrain prior to lie in Lambda
+    # Constrain prior to lie in Lambda; this also checks validity of lambda mins, maxes
     lambda_bounds_mask = rect_A(lambda_mins, lambda_maxes)
     prior_mask = lambda_bounds_mask(prior_sample)
     prior_sample = prior_sample[prior_mask]
     prior_sample_size = len(prior_sample)
+    lambda_dim = len(lambda_mins)
 
     # Construct (N, dim(Lambda) + 1) array of (lambda, u) pairs, apply map
-    Q_inputs = np.column_stack(
+    q_inputs = np.column_stack(
         (prior_sample, np.full((prior_sample_size, 1), u))
     )
-    Q_outputs = apply_map(Q_inputs, Q)  # (N, 1)
+    if q_inputs.shape != (prior_sample_size, lambda_dim + 1):
+        raise ValueError("Invalid shape of inputs into Q.")
+
+    Q_outputs = apply_map(q_inputs, Q)  # (N, 1)
 
     cost_vals = np.square(q - Q_outputs)
     weighted_avg_cost = np.mean(cost_vals, dtype=np.float64)
@@ -101,7 +106,8 @@ def run_sinkhorn(
     lambda_mins: np.ndarray,
     lambda_maxes: np.ndarray,
     MC_sample_size: int,
-    grid_res: int,
+    grid_res_U: int,
+    grid_res_D: int,
     seed: int,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -118,36 +124,48 @@ def run_sinkhorn(
         Map from Lambda x U --> D. Not the augmented version.
     prior : Callable[[np.random.Generator, int], np.ndarray]
         Distribution of lambda in Lambda to weight cost function by
+    reg_term : float
+        Regularization of KL term in Sinkhorn cost function
     lambda_mins, lambda_maxes : (dim(Lambda), ) shaped numpy array
         Array of minimums/maximums, respectively, specifying hyper-rectangle in Lambda
     MC_sample_size : int
         Number of Monte Carlo samples to use to estimate the integral over Lambda
-    grid_res : int
-        Number of bins to use along either axis (D or U) to estimate Sinkhorn on
+    grid_res_U, grid_res_D : int
+        Number of bins to use along each axis (D or U) to estimate Sinkhorn on
     seed : int
         For reproducibility in prior samples.
 
     Returns
     --------
-    sinkhorn_sol : (grid_res, grid_res) numpy array
+    sinkhorn_sol : (grid_res_U, grid_res_D) numpy array
         Sinkhorn estimate
-    u_grid, q_grid : (grid_res + 1, ) numpy array
-        Bin edges to use for  U or D, respectively
+    u_grid, q_grid : (grid_res_U + 1, ) or (grid_res_D + 1, ) numpy array
+        Bin edges to use for U or D, respectively
     empirical_u, empirical_q :(grid_res, ) numpy array
         Empirical probability distribution for U data and Q data, respectively,
         over the bins in u_grid, q_grid.
     """
+    if reg_term <= 0:
+        raise ValueError(
+            "Sinkhorn regularization term must be strictly positive."
+        )
 
-    u_grid = make_partition(np.min(u_data), np.max(u_data), grid_res)
-    q_grid = make_partition(np.min(q_data), np.max(q_data), grid_res)
+    u_data = u_data[:, None] if u_data.ndim == 1 else u_data
+    q_data = q_data[:, None] if q_data.ndim == 1 else q_data
+
+    if u_data.shape[1] != 1 or q_data.shape[1] != 1:
+        raise ValueError("U and D data must be real-valued")
+
+    u_grid = make_partition(np.min(u_data), np.max(u_data), grid_res_U)
+    q_grid = make_partition(np.min(q_data), np.max(q_data), grid_res_D)
 
     # Estimate empirical distribution
     empirical_u = counts_observed(u_data, bin_edges=u_grid)
     empirical_q = counts_observed(q_data, bin_edges=q_grid)
 
-    # Add small positive number and normalize for stability
-    empirical_u = (empirical_u + 0.0001) / empirical_u.sum()
-    empirical_q = (empirical_q + 0.0001) / empirical_q.sum()
+    # Normalize for stability
+    empirical_u /= empirical_u.sum()
+    empirical_q /= empirical_q.sum()
 
     fixed_cost_args = (
         Q,
@@ -158,23 +176,26 @@ def run_sinkhorn(
         seed,
     )
     # Estimate cost at the bottom-left corner of each bin formed by u_grid x q_grid
+    # Rows are comprised of c(q_1, u*), c(q_2, u*), ... for each fixed u*
+    # Each column is a different q_i
+    # Matrix of shape (grid_res_U, grid_res_D)
     cost_matrix = np.array(
         [
-            [compute_cost(q, u, *fixed_cost_args) for u in u_grid[:grid_res]]
-            for q in q_grid[:grid_res]
+            [compute_cost(q, u, *fixed_cost_args) for q in q_grid[:grid_res_D]]
+            for u in u_grid[:grid_res_U]
         ]
     )
+
     cost_matrix = cost_matrix / np.sum(cost_matrix)
 
+    if cost_matrix.shape != (grid_res_U, grid_res_D):
+        raise ValueError("Invalid shape of cost matrix")
+
     sinkhorn_sol = ot.sinkhorn(
-        a=empirical_u,
-        b=empirical_q,
-        M=cost_matrix,
-        reg=reg_term,
-        verbose=False,
+        a=empirical_u, b=empirical_q, M=cost_matrix, reg=reg_term
     )
 
-    sinkhorn_sol = sinkhorn_sol / sinkhorn_sol.sum()  # type: ignore
+    sinkhorn_sol /= sinkhorn_sol.sum()
 
     return sinkhorn_sol, u_grid, q_grid, empirical_u, empirical_q
 
@@ -191,9 +212,9 @@ def sample_joint_pairs(
 
     Parameters
     -----------
-    sinkhorn_sol : (grid_res, grid_res) numpy array
-        Sinkhorn estimate, where grid_res was chosen in Sinkhorn algorithm.
-    u_grid, q_grid : (grid_res + 1, ) numpy array
+    sinkhorn_sol : (grid_res_U, grid_res_D) numpy array
+        Sinkhorn estimate, where grid_res_{U, D} were chosen in Sinkhorn algorithm.
+    u_grid, q_grid : (grid_res_{U, D} + 1, ) numpy array
         Bin edges to use for  U or D.
     sample_size : int
         Number of joint pairs (q, u) to draw
@@ -202,14 +223,14 @@ def sample_joint_pairs(
 
     Returns
     --------
-    q_sink_samples, u_sink_samples : (sample_size, ) arrays
+    q_sink_samples, u_sink_samples : (sample_size, 1) arrays
         Two paired arrays of q and u samples.
     """
     u_bin_count = len(u_grid) - 1
     q_bin_count = len(q_grid) - 1
 
     if sinkhorn_sol.shape != (u_bin_count, q_bin_count):
-        raise ValueError("Sinkhorn solution of wrong dimensions.")
+        raise ValueError("Sinkhorn solution or grids of wrong dimensions.")
 
     rng = np.random.default_rng(seed=seed)
 
@@ -244,7 +265,6 @@ def sample_joint_pairs(
     # If a particular tile is chosen, sample uniformly within that tile
     q_sink_samples = rng.uniform(q_grid[q_sink_idxs], q_grid[q_sink_idxs + 1])
     u_sink_samples = rng.uniform(u_grid[u_sink_idxs], u_grid[u_sink_idxs + 1])
-
     return q_sink_samples, u_sink_samples
 
 

@@ -4,6 +4,7 @@ Tests sinkhorn_functions.py
 """
 
 import numpy as np
+import pytest
 from src.sinkhorn_functions import compute_cost
 from src.sampler_functions import sample_distr
 
@@ -106,3 +107,22 @@ def test_sinkhorn_cost_not_at_origin_and_uniform_prior():
         q=5, u=1, Q=lambda x, y, z: x * (1 - 3 * z) + 2 * y, **fixed_params
     )
     assert np.allclose(cost, 77 / 3, rtol=0.005)
+
+
+def test_sinkhorn_cost_bad_lambda_bounds():
+    bad_fixed_params = {
+        "q": 0,
+        "u": 0,
+        "Q": lambda x, y, z: x + y + z,
+        "prior": fixed_prior_data,
+        "lambda_mins": np.array([0, 0]),
+        "lambda_maxes": np.array([1, 1, 1]),
+        "MC_sample_size": 1,  # will be over-rode by fixed prior
+        "seed": 0,
+    }
+    with pytest.raises(ValueError, match="Incompatible lengths"):
+        compute_cost(**bad_fixed_params)
+
+    bad_fixed_params_2 = {**bad_fixed_params, "lambda_maxes": np.array([1, -1])}
+    with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
+        compute_cost(**bad_fixed_params_2)
