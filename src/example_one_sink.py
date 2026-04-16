@@ -15,19 +15,36 @@ from src.sinkhorn_functions import (
 plt.rcParams.update({"pdf.fonttype": 42, "text.usetex": True})
 
 SEED = 20251028
+
 LAMBDA_MEAN = [4, 4]
 LAMBDA_COV = [[1, 0], [0, 5]]
 U_MEAN = -1
 U_SD = 5
-N_INPUT_SAMPLES = 10000
-MC_SAMPLE_SIZE = 5000
-JOINT_PAIR_SAMPLE_SIZE = 10000
-DPI = 720
-SINKHORN_REG = 0.001
 LAMBDA_MINS = np.array([-10, -10])
 LAMBDA_MAXES = np.array([10, 10])
 LAMBDA_U_MINS = np.array([-10, -10, -10])
 LAMBDA_U_MAXES = np.array([10, 10, 10])
+
+SINKHORN_REG = 0.001
+
+N_INPUT_SAMPLES = 10000
+MC_SAMPLE_SIZE = 5000
+JOINT_PAIR_SAMPLE_SIZE = 10000
+
+FIGSIZE = (5, 5)
+DPI = 720
+
+
+def uniform_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
+    """Prior on Lambda."""
+    return rng.uniform(LAMBDA_MINS, LAMBDA_MAXES, size=(n, 2))
+
+
+def uniform_normal_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
+    """Prior on Lambda x U an independent coupling that preserves actual U marginal."""
+    lambdas = uniform_sampler(rng, n)
+    us = rng.normal(U_MEAN, U_SD, n)[:, None]
+    return np.hstack((lambdas, us))
 
 
 def Q(x, y, z):
@@ -48,14 +65,6 @@ if __name__ == "__main__":
     q_data = apply_map(lambda_u_data, Q)  # (N, 3) --> (N, 1)
 
     u_data_new = rng.normal(U_MEAN, U_SD, 9000)[:, None]  # (N, 1)
-
-    def uniform_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
-        return rng.uniform(LAMBDA_MINS, LAMBDA_MAXES, size=(n, 2))
-
-    def uniform_normal_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
-        lambdas = uniform_sampler(rng, n)
-        us = rng.normal(U_MEAN, U_SD, n)[:, None]
-        return np.hstack((lambdas, us))
 
     sinkhorn_sol, u_grid, q_grid, empirical_u, empirical_q = run_sinkhorn(
         q_data,
@@ -97,7 +106,7 @@ if __name__ == "__main__":
 
     x_edges, y_edges, Z = probs_to_mesh(prob_df_marginalized)
 
-    fig, ax = plt.subplots(figsize=(5, 5), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=FIGSIZE, constrained_layout=True)
     vmax = prob_df_marginalized["prob"].max()
     norm = PowerNorm(gamma=0.5, vmin=0, vmax=vmax)
     mesh = ax.pcolormesh(

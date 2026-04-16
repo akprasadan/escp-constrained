@@ -86,8 +86,7 @@ def compute_cost(
     q_inputs = np.column_stack(
         (prior_sample, np.full((prior_sample_size, 1), u))
     )
-    if q_inputs.shape != (prior_sample_size, lambda_dim + 1):
-        raise ValueError("Invalid shape of inputs into Q.")
+    assert q_inputs.shape == (prior_sample_size, lambda_dim + 1)
 
     Q_outputs = apply_map(q_inputs, Q)  # (N, 1)
 
@@ -118,7 +117,7 @@ def run_sinkhorn(
     ----------
     q_data : (N_1, 1) numpy array
         Array of data in D
-    u : (N_2, 1) numpy array
+    u_data : (N_2, 1) numpy array
         Array of data in U
     Q : Callable[..., np.ndarray]
         Map from Lambda x U --> D. Not the augmented version.
@@ -185,11 +184,9 @@ def run_sinkhorn(
             for u in u_grid[:grid_res_U]
         ]
     )
-
     cost_matrix = cost_matrix / np.sum(cost_matrix)
 
-    if cost_matrix.shape != (grid_res_U, grid_res_D):
-        raise ValueError("Invalid shape of cost matrix")
+    assert cost_matrix.shape == (grid_res_U, grid_res_D)
 
     sinkhorn_sol = ot.sinkhorn(
         a=empirical_u, b=empirical_q, M=cost_matrix, reg=reg_term
@@ -249,18 +246,12 @@ def sample_joint_pairs(
     u_sink_idxs, q_sink_idxs = np.unravel_index(
         flat_idx, shape=sinkhorn_sol.shape
     )
-    if len(u_sink_idxs) != len(q_sink_idxs):
-        raise ValueError(
-            "Mismatched number of indices sampled from Sinkhorn solution"
-        )
+    # Check we got right number of sampled indices
+    assert len(u_sink_idxs) == len(q_sink_idxs) == sample_size
 
-    if len(u_sink_idxs) != sample_size:
-        raise ValueError(
-            "Invalid quantity of indices sampled from Sinkhorn solution"
-        )
-
-    if q_sink_idxs.max() > q_bin_count or u_sink_idxs.max() > u_bin_count:
-        raise ValueError("Invalid indices sampled from Sinkhorn solution")
+    # Check that our indices are in the right range
+    assert np.all((0 <= q_sink_idxs) & (q_sink_idxs <= q_bin_count))
+    assert np.all((0 <= u_sink_idxs) & (u_sink_idxs <= u_bin_count))
 
     # If a particular tile is chosen, sample uniformly within that tile
     q_sink_samples = rng.uniform(q_grid[q_sink_idxs], q_grid[q_sink_idxs + 1])
@@ -333,41 +324,41 @@ def augmented_scp(
     return prob_df, prior_df
 
 
-def plot_sinkhorn(
-    sinkhorn_sol: np.ndarray,
-    empirical_u: np.ndarray,
-    empirical_q: np.ndarray,
-    q_sink_samples: np.ndarray,
-    u_sink_samples: np.ndarray,
-    u_edges: np.ndarray,
-    q_edges: np.ndarray,
-) -> None:
+# def plot_sinkhorn(
+#     sinkhorn_sol: np.ndarray,
+#     empirical_u: np.ndarray,
+#     empirical_q: np.ndarray,
+#     q_sink_samples: np.ndarray,
+#     u_sink_samples: np.ndarray,
+#     u_edges: np.ndarray,
+#     q_edges: np.ndarray,
+# ) -> None:
 
-    ot.plot.plot1D_mat(
-        a=empirical_u,
-        b=empirical_q,
-        M=sinkhorn_sol,
-        title="Cost matrix M",
-        plot_style="xy",
-        a_label="U",
-        b_label="D",
-    )
+#     ot.plot.plot1D_mat(
+#         a=empirical_u,
+#         b=empirical_q,
+#         M=sinkhorn_sol,
+#         title="Cost matrix M",
+#         plot_style="xy",
+#         a_label="U",
+#         b_label="D",
+#     )
 
-    H, _, _ = np.histogram2d(
-        u_sink_samples, q_sink_samples, bins=[u_edges, q_edges]
-    )
-    H = H / H.sum()
+#     H, _, _ = np.histogram2d(
+#         u_sink_samples, q_sink_samples, bins=[u_edges, q_edges]
+#     )
+#     H = H / H.sum()
 
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
-    ax[0].pcolormesh(u_edges, q_edges, H.T, shading="auto", cmap="viridis")
+#     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
+#     ax[0].pcolormesh(u_edges, q_edges, H.T, shading="auto", cmap="viridis")
 
-    ax[0].set_title("Sampled from joint")
+#     ax[0].set_title("Sampled from joint")
 
-    ax[1].pcolormesh(
-        u_edges, q_edges, sinkhorn_sol.T, shading="auto", cmap="viridis"
-    )
+#     ax[1].pcolormesh(
+#         u_edges, q_edges, sinkhorn_sol.T, shading="auto", cmap="viridis"
+#     )
 
-    ax[1].set_title("Sinkhorn Solution")
-    plt.tight_layout()
-    plt.show()
-    plt.close()
+#     ax[1].set_title("Sinkhorn Solution")
+#     plt.tight_layout()
+#     plt.show()
+#     plt.close()

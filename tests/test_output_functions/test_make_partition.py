@@ -118,46 +118,67 @@ def test_make_partition_widths_sum_to_range():
     assert np.isclose(total_width, grid_maxes - grid_mins)
 
 
-def test_make_partition_raises_when_min_not_less_than_max_equal():
-    """Raises when grid_mins == grid_maxes."""
-    with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
-        make_partition(np.array([1]), np.array([1]), 3)
+def test_make_partition_raises_when_nonmonotonic_grid_bounds():
+    """Raises when grid bounds are non-monotonic."""
+    bad_bounds = [
+        ([1], [1]),  # xmin = xmax
+        ([1.0], [1.0]),  # xmin = xmax (as floats)
+        ([5], [1]),  # xmin > xmax
+        ([1, 2], [1, 3]),  # xmin = xmax
+        ([1, 2], [2, 2]),  # ymin = ymax
+        ([5, 7], [1, 8]),  # xmin > xmax
+        ([5, 7], [7, 6]),  # ymin > ymax
+        ([5, 6], [0, 1]),  # xmin > xmax and ymin > ymax
+    ]
+
+    for arr1, arr2 in bad_bounds:
+        with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
+            make_partition(np.array(arr1), np.array(arr2), 3)
 
 
-def test_make_partition_raises_when_min_not_less_than_max_equal_higher_dim():
-    """Raises when grid_mins == grid_maxes."""
-    with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
-        make_partition(np.array([1, 2]), np.array([1, 3]), 3)
+def test_make_partition_raises_mismatched_grid_bounds():
+    """Raises when grid_mins and grid_maxes of incorrect length."""
+    bad_bounds = [
+        ([1], [1, 2]),
+        ([5], [7, 8]),
+        ([7, 8], [5]),
+        ([1, 2], [3]),
+        ([1, 1, 1], [2]),
+    ]
 
-    # Same thing but swap components with error
-    with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
-        make_partition(np.array([1, 2]), np.array([2, 2]), 3)
-
-
-def test_make_partition_raises_when_min_not_less_than_max_reversed():
-    """Raises when grid_mins > grid_maxes."""
-    with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
-        make_partition(np.array([5]), np.array([1]), 3)
-
-
-def test_make_partition_raises_when_min_not_less_than_max_reversed_higher_dim():
-    """Raises when grid_mins > grid_maxes."""
-    with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
-        make_partition(np.array([5, 7]), np.array([1, 8]), 3)
-
-    # Same thing but swap which component draws the error
-    with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
-        make_partition(np.array([5, 7]), np.array([7, 6]), 5)
+    for arr1, arr2 in bad_bounds:
+        with pytest.raises(ValueError, match="Incompatible lengths"):
+            make_partition(np.array(arr1), np.array(arr2), 3)
 
 
-def test_make_partition_raises_when_M_less_than_1():
-    """Raises when M < 1."""
-    with pytest.raises(ValueError, match="must be an integer >= 1"):
-        make_partition(np.array([0]), np.array([1]), 0)
+def test_make_partition_raises_bad_dim_grid_bounds():
+    """Raises when grid_mins and grid_maxes are not 1D"""
+    bad_bounds = [
+        ([[0], [0]], [1, 1]),
+        ([[0], [0]], [[1], [1]]),
+        ([0, 0], [[1], [1]]),
+        ([[0, 0], [0, 0]], [1, 1]),
+        ([1, 1], [[0, 0], [0, 0]]),
+    ]
+
+    for arr1, arr2 in bad_bounds:
+        with pytest.raises(ValueError, match="should be 1D"):
+            make_partition(np.array(arr1), np.array(arr2), 3)
 
 
-def test_make_partition_raises_when_M_not_int():
-    """Raises when M is not an integer."""
-    with pytest.raises(ValueError, match="must be an integer >= 1"):
-        # Use cast to pretend 0.5 is an integer, otherwise type checker will flag warning
-        make_partition(np.array([0]), np.array([1]), cast(int, 0.5))
+def test_make_partition_raises_empty_bounds():
+    """Raises when grid_mins and/or grid_maxes are empty."""
+    bad_bounds = [([], [7]), ([7], []), ([], [])]
+    for arr1, arr2 in bad_bounds:
+        with pytest.raises(ValueError, match="cannot be empty"):
+            make_partition(np.array(arr1), np.array(arr2), 3)
+
+
+def test_make_partition_raises_when_M_invalid():
+    """Raises when M < 1 or M is not an integer."""
+    bad_Ms = [0, 0.5, 1.5, -1, -5]
+    for M in bad_Ms:
+        with pytest.raises(ValueError, match="must be an integer >= 1"):
+            make_partition(np.array([0]), np.array([1]), M)
+        with pytest.raises(ValueError, match="must be an integer >= 1"):
+            make_partition(np.array([0, 0]), np.array([1, 1]), M)

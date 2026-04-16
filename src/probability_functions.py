@@ -151,7 +151,6 @@ def prob_over_grid(
     pandas.DataFrame with 5 columns ['xmin','xmax','ymin','ymax','prob'] and h^2 rows.
     """
     # First some basic input validation
-    check_grid_bounds(grid_mins, grid_maxes)
     input_dim = prior_data.shape[1]
     assert len(grid_mins) == input_dim
 

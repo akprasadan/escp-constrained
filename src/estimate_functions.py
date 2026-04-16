@@ -112,8 +112,6 @@ def synthetic_scp(
     tgd_df : pandas.DataFrame
         TGD samples on Lambda with their `q = Q(lambda)`.
     """
-    check_grid_bounds(grid_mins, grid_maxes)
-
     # Obtain independent seeds for TGD and prior
     master_seed = np.random.default_rng(seed)
     tgd_seed = int(master_seed.integers(0, 2**63 - 1))
@@ -235,7 +233,6 @@ def empirical_scp(
     prior_df : pandas.DataFrame
         Prior samples on Lambda with their `q = Q(lambda)`.
     """
-    check_grid_bounds(grid_mins, grid_maxes)
 
     # Prior seed only (TGD is empirical here)
     master = np.random.default_rng(seed)

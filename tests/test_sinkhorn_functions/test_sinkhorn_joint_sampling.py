@@ -7,7 +7,7 @@ RNG = np.random.default_rng(seed=SEED)
 N_Q = 1000
 N_U = 600
 MC_SAMPLE_SIZE = 200
-JOINT_SAMPLE_SIZE = 180
+JOINT_SAMPLE_SIZE = 1000
 
 
 def uniform_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
@@ -15,7 +15,7 @@ def uniform_sampler(rng: np.random.Generator, n: int) -> np.ndarray:
 
 
 fixed_params = {
-    "q_data": RNG.uniform(-10, 15, size=N_Q),
+    "q_data": RNG.uniform(-15, 10, size=N_Q),
     "u_data": RNG.uniform(0, 5, size=(N_U, 1)),  # Intentional reshaping
     "Q": lambda x, y, z: x + 2 * y - z,
     "prior": uniform_sampler,
@@ -36,18 +36,45 @@ q_sink_samples, u_sink_samples = sample_joint_pairs(
 
 
 def test_sample_joint_pairs_output_size():
-    """Make sure we got two (N, ) shaped arrays of the same length."""
+    """Make sure we got two (N, 1) shaped arrays of the same length."""
     assert q_sink_samples.shape == (JOINT_SAMPLE_SIZE, 1)
     assert u_sink_samples.shape == (JOINT_SAMPLE_SIZE, 1)
+
+
+def test_sample_joint_pairs_numerically_plausible():
+    """Check the q and u samples have values consistent with marginal"""
+    min_u, max_u = u_sink_samples.min(), u_sink_samples.max()
+    min_q, max_q = q_sink_samples.min(), q_sink_samples.max()
+
+    average_u = u_sink_samples.mean()
+    average_q = q_sink_samples.mean()
+
+    assert 0 < min_u < 0.1
+    assert 4.9 < max_u < 5
+
+    assert -15 < min_q < -14.9
+    assert 9.9 < max_q < 10
+
+    assert 2.4 < average_u < 2.6
+    assert -2.7 < average_q < -2.3  # Can't be too precise here, but plausible
 
 
 def test_sample_joint_pairs_non_trivial():
     """Make sure we got two (N, ) shaped arrays with all different entries from uniform sampling.
     This is so even if the same index got sampled from the sinkhorn matrix, since we sample
     a random index and then sample within that corresponding tile.
+
+    However, for both U and D, there should be multiple samples in the same unit interval,
+    since we sampled indices of the Sinkhorn matrix with replacement.
     """
     assert len(np.unique(q_sink_samples)) == JOINT_SAMPLE_SIZE
     assert len(np.unique(u_sink_samples)) == JOINT_SAMPLE_SIZE
+
+    integer_q_sink_samples = np.ceil(q_sink_samples)
+    assert len(np.unique(integer_q_sink_samples)) != JOINT_SAMPLE_SIZE
+
+    integer_u_sink_samples = np.ceil(u_sink_samples)
+    assert len(np.unique(integer_u_sink_samples)) != JOINT_SAMPLE_SIZE
 
 
 def test_sample_joint_pairs_bad_u_grid():

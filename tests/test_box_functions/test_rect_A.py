@@ -268,10 +268,11 @@ def test_rect_A_no_points_selected_3d():
 
 def test_rect_A_raises_when_bounds_invalid():
     """Invalid bounds raise ValueError. Tests 1D, 2D or 3D examples."""
-    # Min and max values of incorrect length
-
+    # Either wrong lengths or one grid_bound is empty
     incompatible_cases = [
+        ([], []),
         ([], [1]),
+        ([1], []),
         ([0], [1, 1]),
         ([1, 1], [5]),
         ([0, 0], [1, 1, 1]),
@@ -279,7 +280,9 @@ def test_rect_A_raises_when_bounds_invalid():
     ]
 
     for arr1, arr2 in incompatible_cases:
-        with pytest.raises(ValueError, match="Incompatible lengths"):
+        with pytest.raises(
+            ValueError, match=r"Incompatible lengths|cannot be empty"
+        ):
             rect_A(np.array(arr1), np.array(arr2))
 
     non_monotonic_cases = [
@@ -299,15 +302,25 @@ def test_rect_A_raises_when_bounds_invalid():
         with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
             rect_A(np.array(arr1), np.array(arr2))
 
+    bad_dims = [
+        ([[0], [0]], [1, 1]),
+        ([[0], [0]], [[1], [1]]),
+        ([[0, 0], [0, 0]], [1, 1]),
+    ]
+
+    for arr1, arr2 in bad_dims:
+        with pytest.raises(ValueError, match="should be 1D"):
+            rect_A(np.array(arr1), np.array(arr2))
+
 
 def test_rect_A_numba():
     """Check that the numba logic is returning same thing as overall function."""
     rng = np.random.default_rng(seed=20251028)
-    dim = 3
-    N = 1000
-    points = rng.uniform(low=-5, high=25, size=(N, dim))
-    grid_mins = rng.uniform(0, 1, size=dim)
-    grid_maxes = rng.uniform(10, 20, size=dim)
+
+    # 3D example
+    points = rng.uniform(low=-5, high=25, size=(1000, 3))
+    grid_mins = rng.uniform(0, 1, size=3)
+    grid_maxes = rng.uniform(10, 20, size=3)
     # Use py_func to not use jit compiled version for accurate code coverage report
     numba_mask = rect_A_kernel.py_func(  # type: ignore[attr-defined]
         points, grid_mins, grid_maxes
@@ -315,10 +328,7 @@ def test_rect_A_numba():
     mask_from_rect_A = rect_A(grid_mins, grid_maxes)(points)
     assert np.allclose(mask_from_rect_A, numba_mask)
 
-    rng = np.random.default_rng(seed=20251028)
-    dim = 1
-    N = 1000
-    points = rng.uniform(low=-5, high=25, size=N)  # Note not of size (N, 1)
+    points = rng.uniform(low=-5, high=25, size=1000)  # Note (N, ) vs (N, 1)
     grid_mins = rng.uniform(0, 1, size=1)
     grid_maxes = rng.uniform(10, 20, size=1)
     numba_mask = rect_A_kernel.py_func(  # type: ignore[attr-defined]

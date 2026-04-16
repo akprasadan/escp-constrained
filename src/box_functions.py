@@ -23,13 +23,17 @@ def check_grid_bounds(grid_mins: np.ndarray, grid_maxes: np.ndarray) -> None:
     --------
     ValueError : If bounds are invalid.
     """
+    len_grid_mins, len_grid_maxes = len(grid_mins), len(grid_maxes)
 
-    d = len(grid_mins)
+    if len_grid_mins == 0 or len_grid_maxes == 0:
+        raise ValueError("grid_mins and grid_maxes cannot be empty")
 
-    if d != len(grid_maxes):
+    if len_grid_mins != len_grid_maxes:
         raise ValueError(
             "Incompatible lengths (dimension) for grid_mins and grid_maxes."
         )
+    if grid_mins.ndim != 1 or grid_maxes.ndim != 1:
+        raise ValueError("grid_mins and grid_maxes should be 1D")
 
     if np.any(grid_mins >= grid_maxes):
         raise ValueError(f"grid_mins >= grid_maxes for some dimension.")

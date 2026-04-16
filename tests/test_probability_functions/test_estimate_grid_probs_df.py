@@ -78,6 +78,9 @@ def test_invalid_inputs_raise():
     """Invalid inputs raise ValueError (bad bounds or invalid h)."""
 
     bad_bounds = [
+        ([], []),  # empty or partially empty
+        ([1], []),
+        ([], [1]),
         ([1], [0]),  # bad x in 1d
         ([1, 1], [0, 10]),  # bad x in 2d
         ([2, 0], [1, 10]),  # bad x in 2d
@@ -92,8 +95,17 @@ def test_invalid_inputs_raise():
         ([0, 9, 2], [10, 5, 4]),  # bad y in 3d
         ([0, 0, 5], [10, 5, 1]),  # bad z in 3d
         ([0, 2, 2], [10, 5, 0]),  # bad z in 2d
+        ([0], [1, 1]),  # mismatched lengths
+        ([0, 0], [1]),
+        ([0], [1, 1, 1]),
+        ([0, 0], [1, 1, 1]),
+        ([[0], [0]], [1, 1]),  # Not 1D
+        ([[0], [0]], [[1], [1]]),
+        ([[0, 0], [0, 0]], [1, 1]),
     ]
-    output_dims = [1, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1]
+    rng = np.random.default_rng(seed=20251028)
+    # Random array of form like [3, 2, 1, 3, 1, 2, 1, 3, 2, 2, 1, 3, ...]
+    output_dims = rng.choice([1, 2, 3], size=len(bad_bounds), replace=True)
 
     invalid_dummy_data = [
         dummy_data(
@@ -106,12 +118,12 @@ def test_invalid_inputs_raise():
         for (mins, maxes), output_dim in zip(bad_bounds, output_dims)
     ]
 
+    msg = r"grid_mins >= grid_maxes|Incompatible lengths|empty|1D"
     for bad_dummy in invalid_dummy_data:
-        with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
+        with pytest.raises(ValueError, match=msg):
             prob_over_grid(*bad_dummy, h=2)
 
     invalid_hs = [0, -3, 1.5, "4"]
-
     good_bounds = [([0], [1]), ([0, 0], [1, 1]), ([0, 0, 0], [1, 1, 1])]
 
     good_dummy_inputs = [

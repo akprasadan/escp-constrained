@@ -1,7 +1,7 @@
 """
 sampler_functions.py
 
-Helper function to draw data from a trial-generating-distribution (TGD) or prio, for any dimension.
+Helper function to draw data from a trial-generating-distribution (TGD) or prior, for any dimension.
 The helper function take in a seed, desired sample size, and a sampler functions of the form:
 
 >>> def sampler(rng: np.random.Generator, n: int) -> np.ndarray:
