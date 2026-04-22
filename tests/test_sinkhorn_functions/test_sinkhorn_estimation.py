@@ -34,8 +34,8 @@ sinkhorn_sol, u_grid, q_grid, empirical_u, empirical_q = run_sinkhorn(
 def test_run_sinkhorn_output_shapes():
     """Check shapes of each of the outputs of the sinkhorn estimation."""
 
-    assert u_grid.shape == (41, 1)
-    assert q_grid.shape == (61, 1)
+    assert u_grid.shape == (41,)
+    assert q_grid.shape == (61,)
     assert sinkhorn_sol.shape == (40, 60)
     assert empirical_u.shape == (40,)
     assert empirical_q.shape == (60,)

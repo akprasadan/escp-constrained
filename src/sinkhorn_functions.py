@@ -22,12 +22,10 @@ from typing import Callable
 
 import numpy as np
 import ot
-import ot.plot
-import matplotlib.pyplot as plt
 import pandas as pd
 
 
-from src.box_functions import check_grid_bounds, rect_A
+from src.box_functions import rect_A
 from src.estimate_functions import empirical_scp
 from src.sampler_functions import sample_distr
 from src.output_functions import apply_map, counts_observed, make_partition
@@ -190,11 +188,17 @@ def run_sinkhorn(
 
     sinkhorn_sol = ot.sinkhorn(
         a=empirical_u, b=empirical_q, M=cost_matrix, reg=reg_term
+    )  # type: ignore
+
+    sinkhorn_sol /= np.sum(sinkhorn_sol)  # type: ignore
+
+    return (
+        sinkhorn_sol,
+        u_grid.flatten(),
+        q_grid.flatten(),
+        empirical_u,
+        empirical_q,
     )
-
-    sinkhorn_sol /= sinkhorn_sol.sum()
-
-    return sinkhorn_sol, u_grid, q_grid, empirical_u, empirical_q
 
 
 def sample_joint_pairs(
@@ -322,43 +326,3 @@ def augmented_scp(
     )
 
     return prob_df, prior_df
-
-
-# def plot_sinkhorn(
-#     sinkhorn_sol: np.ndarray,
-#     empirical_u: np.ndarray,
-#     empirical_q: np.ndarray,
-#     q_sink_samples: np.ndarray,
-#     u_sink_samples: np.ndarray,
-#     u_edges: np.ndarray,
-#     q_edges: np.ndarray,
-# ) -> None:
-
-#     ot.plot.plot1D_mat(
-#         a=empirical_u,
-#         b=empirical_q,
-#         M=sinkhorn_sol,
-#         title="Cost matrix M",
-#         plot_style="xy",
-#         a_label="U",
-#         b_label="D",
-#     )
-
-#     H, _, _ = np.histogram2d(
-#         u_sink_samples, q_sink_samples, bins=[u_edges, q_edges]
-#     )
-#     H = H / H.sum()
-
-#     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
-#     ax[0].pcolormesh(u_edges, q_edges, H.T, shading="auto", cmap="viridis")
-
-#     ax[0].set_title("Sampled from joint")
-
-#     ax[1].pcolormesh(
-#         u_edges, q_edges, sinkhorn_sol.T, shading="auto", cmap="viridis"
-#     )
-
-#     ax[1].set_title("Sinkhorn Solution")
-#     plt.tight_layout()
-#     plt.show()
-#     plt.close()

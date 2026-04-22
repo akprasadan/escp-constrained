@@ -37,8 +37,8 @@ q_sink_samples, u_sink_samples = sample_joint_pairs(
 
 def test_sample_joint_pairs_output_size():
     """Make sure we got two (N, 1) shaped arrays of the same length."""
-    assert q_sink_samples.shape == (JOINT_SAMPLE_SIZE, 1)
-    assert u_sink_samples.shape == (JOINT_SAMPLE_SIZE, 1)
+    assert q_sink_samples.shape == (JOINT_SAMPLE_SIZE,)
+    assert u_sink_samples.shape == (JOINT_SAMPLE_SIZE,)
 
 
 def test_sample_joint_pairs_numerically_plausible():
@@ -80,10 +80,10 @@ def test_sample_joint_pairs_non_trivial():
 def test_sample_joint_pairs_bad_u_grid():
     """Make sure we got two (N, ) shaped arrays of the same length."""
     u_grid_bad = u_grid[:-1]
-    assert u_grid_bad.shape == (len(u_grid) - 1, 1)
+    assert u_grid_bad.shape == (len(u_grid) - 1,)
 
     q_grid_bad = q_grid[:-1]
-    assert q_grid_bad.shape == (len(q_grid) - 1, 1)
+    assert q_grid_bad.shape == (len(q_grid) - 1,)
 
     good_arguments = {
         "sinkhorn_sol": sinkhorn_sol,

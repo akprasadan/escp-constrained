@@ -13,7 +13,6 @@ from src.output_functions import counts_validation, make_partition
 from src.output_functions import counts_observed
 from src.box_functions import mask_in_A
 from src.box_functions import rect_A
-from src.box_functions import check_grid_bounds
 
 
 def prob_input_validation(

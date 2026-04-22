@@ -20,7 +20,6 @@ from src.sampler_functions import sample_distr
 from src.output_functions import make_partition
 from src.output_functions import apply_map
 from src.box_functions import rect_A
-from src.box_functions import check_grid_bounds
 
 
 def simplify_low_dim_dfs(
@@ -153,7 +152,6 @@ def synthetic_scp(
     probs_df["prob"] /= probs_df["prob"].sum()
 
     # 5) Package prior and TGD samples with respective Q evaluations into dataframes
-    # TODO: Correct for higher dimensions
     prior_df = pd.DataFrame(
         {
             "source": "prior",

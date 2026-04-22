@@ -12,6 +12,7 @@ from typing import TypedDict
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
+import pytest
 
 from src.estimate_functions import synthetic_scp
 from src.estimate_functions import empirical_scp
@@ -279,3 +280,45 @@ def test_synthetic_and_empirical_match():
         prior_df_huge_tgd_huge_pr_emp,
         check_exact=True,
     )
+
+
+def test_SCP_bad_bounds():
+    """Use invalid grid_mins or grid_maxes, either due to the wrong length,
+    non-monotonic, or being partially empty."""
+    bad_fixed_params = {
+        **FIXED_SCP_PARAMS,
+        "prior": uniform_prior,
+        "grid_maxes": np.array([XMAX, YMAX]),  # missing zmax
+    }
+    q_data_fixed = tgd_df[["q_x", "q_y"]].to_numpy()
+    with pytest.raises(ValueError, match="Incompatible lengths"):
+        synthetic_scp(K=1000, tgd=gaussian_tgd, **bad_fixed_params)
+    with pytest.raises(ValueError, match="Incompatible lengths"):
+        empirical_scp(q_data=q_data_fixed, **bad_fixed_params)
+
+    bad_fixed_params = {
+        **bad_fixed_params,
+        "grid_maxes": np.array([XMAX, YMAX, ZMIN]),  # zmin == zmax now
+    }
+    with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
+        synthetic_scp(K=1000, tgd=gaussian_tgd, **bad_fixed_params)
+    with pytest.raises(ValueError, match="grid_mins >= grid_maxes"):
+        empirical_scp(q_data=q_data_fixed, **bad_fixed_params)
+
+    bad_fixed_params = {**bad_fixed_params, "grid_maxes": [], "grid_mins": []}
+    msg = r"cannot be empty"
+    with pytest.raises(ValueError, match=msg):
+        synthetic_scp(K=10000, tgd=gaussian_tgd, **bad_fixed_params)
+    with pytest.raises(ValueError, match=msg):
+        empirical_scp(q_data=q_data_fixed, **bad_fixed_params)
+
+    bad_fixed_params = {
+        **bad_fixed_params,
+        "grid_maxes": [],
+        "grid_mins": np.array([1]),
+    }
+    msg = r"cannot be empty"
+    with pytest.raises(ValueError, match=msg):
+        synthetic_scp(K=10000, tgd=gaussian_tgd, **bad_fixed_params)
+    with pytest.raises(ValueError, match=msg):
+        empirical_scp(q_data=q_data_fixed, **bad_fixed_params)
