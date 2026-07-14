@@ -1,24 +1,27 @@
 [project]
-name = "escp-continuity"
+name = "escp-constrained"
 maintainers = [
   {name = "Akshay Prasadan", email = "akprasadan@gmail.com"}]
 version = "0.0.0"
-description = "Implement examples used in paper on continuity of the eSCP operator."
+description = "Implement examples for constrained SCP operator."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.14"
 dependencies = [
+    "fipy>=4.0.2",
+    "gmsh>=4.15.2",
     "matplotlib>=3.10.8",
-    "numpy>=2.4.3",
-    "pandas>=3.0.1",
-    "pytest>=9.0.2",
-    "scipy>=1.17.1",
-    "ucimlrepo>=0.0.7",
+    "numba>=0.65.0",
+    "numpy>=2.4.4",
+    "pandas>=3.0.2",
+    "pot>=0.9.6.post1",
+    "scikit-learn>=1.8.0",
+    "xgboost>=3.2.0",
 ]
 
 [project.urls]
-Repository = "https://github.com/akprasadan/escp-continuity.git"
+Repository = "https://github.com/akprasadan/escp-constrained.git"
 
 [build-system]
 requires = ["uv_build>=0.11.1,<0.12"]
@@ -27,3 +30,30 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-root = ""
 module-name = "src"
+
+[dependency-groups]
+dev = [
+    "coverage>=7.14.0",
+    "pytest>=9.0.3",
+]
+
+[tool.ruff]
+preview = true
+line-length = 88
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 60
+
+
+[tool.ruff.lint]
+ignore = ["E501"]
+fixable = ["ALL"]
+select = ["E", "D", "ANN", "I", "F"]
+extend-select = ["B", "UP", "SIM", "C4", "NPY", "PERF", "RET"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["D104"]

@@ -5,13 +5,25 @@
 # Pytest
 .pytest_cache/
 __pycache__/
+.coverage
+htmlcov/
+
+# Profiling
+*.prof
 
 # VS Code
 .vscode/
+.ruff_cache
 
 # MacOS Metadata
 .DS_Store
 
-# Generated data and plots
-plots/
 data/
+plots/
+*.png
+*.pdf
+
+.Rhistory
+*.R
+
+examples_animated.py

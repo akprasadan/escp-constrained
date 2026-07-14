@@ -1,47 +1,96 @@
-This repository implements the eSCP algorithm given in [^1] for the purpose of running several experiments detailed in a paper[^2] that studies the continuity of this algorithm. The three modules 'src/example_{one, two, three}.py' reproduce the plots from [^2]. Details of the examples are explained in the paper. The algorithm is currently written for 2-dimensions only, and it is a future task to extend it to more dimensions.
+This repository implements an algorithm given in [^1] to solve a so-called
+'Statistical Calibration Problem' (SCP), and then extends it to handle an SCP
+with a partially known stochastic input space, which we also call a 'constrained
+SCP' for short, as opposed to the original 'unconstrained SCP'.  The constrained
+SCP is developed in the paper[^2] associated with this repository. The code for
+the SCP generalizes the code of [another
+repository](https://github.com/akprasadan/escp-continuity.git) authored by
+myself for the purpose of another related paper[^3]. The code now permits
+arbitrary input and output dimensions, although for the constrained SCP, there
+are some additional restrictions. The repo then includes several examples needed
+to reproduce all experiments highlighted in the forthcoming paper[^2].
 
-[^1]: Shi, H., Yang, L., Chi, J., Butler, T., Wang, H., Bingham, D., & Estep, D. (2025). Nonparametric Bayesian Calibration of Computer Models. *arXiv preprint arXiv:2509.22597.*
+[^1]: Shi, H., Yang, L., Chi, J., Butler, T., Wang, H., Bingham, D., & Estep, D.
+    (2026). Nonparametric Bayesian Calibration of Computer Models. *arXiv
+    preprint arXiv:2509.22597.*
 
-[^2]: Prasadan A., Bingham, D., & Estep, D. (2026). Continuity of the Solution of a Non-Parametric Bayesian Statistical Calibration Procedure. *arXiv preprint arXiv:2603.20665.*
+[^2]: Prasadan, A., Basu, S., Yazdi, F., Bingham, D., and Estep, D., 2026.
+    Non-Parametric Model Calibration with Partially Known  Stochastic Input
+    Distributions. *In preparation*.
+
+[^3]: Prasadan, A., Estep, D. and Bingham, D., 2026. Continuity of the Solution
+    of a Non-Parametric Bayesian Statistical Calibration Procedure. *arXiv
+    preprint arXiv:2603.20665.* In revision with the SIAM/ASA Journal of
+    Uncertainty Quantification.
 
 ## Getting Started
- 
-1. Install **uv**, a package manager. [See instructions here](https://docs.astral.sh/uv/getting-started/installation/).
 
-2. Clone the repository and navigate to it.
+Feel free to use any package manager of your choice, but I believe the most
+convenient one is **uv**, a popular package/project manager. I will therefore
+provide instructions assuming you are using **uv**. You can find installation
+instructions for **uv**
+[here](https://docs.astral.sh/uv/getting-started/installation/).
 
-        git clone https://github.com/akprasadan/escp-continuity.git
+1. Clone the repository and navigate to it.
 
-        cd escp-continuity
+    ```bash
+    git clone https://github.com/akprasadan/escp-constrained.git
+    cd escp-constrained
+    ```
 
-3. Install the project and its dependencies.
-
-        uv sync
+2. Install the project and its dependencies with `uv sync`.
 
 ## Usage
 
-Now you can run modules with **uv** in a virtual environment, e.g., 
+Now you can run modules with **uv** in a virtual environment. There are three
+main computational examples in the paper. The first two are run as follows:
 
-        uv run python -m src.example_one
+```bash
+uv run python -m src.examples.example_unconstrained.example_unconstrained
+uv run python -m src.examples.example_one.example_one
+```
 
-        uv run python -m tests.check_pushforward
+For the heat equation example, run the following commands. Warning: Some scripts
+might take some time.
 
-You can also run all unit tests.
+```bash
+uv run python -m src.examples.example_two.pde_plots
+uv run python -m src.examples.example_two.q_computations # warning: slow
+uv run python -m src.examples.example_two.fit_xgb
+uv run python -m src.examples.example_two.example_two # warning: slow
+```
 
-        uv run pytest
+You can run some benchmarking for the heat equation example with:
+
+```bash
+uv run python -m src.examples.example_two.pde_benchmarking # warning: slow
+```
+
+To run all tests, use `uv run pytest`. It should take around a minute to run the
+first time you do so.
 
 ## Directory Structure
 
-- The core functions and examples are stored in `src/`. You only need to run each of the `src/example_{i}.py` files to obtain all the figures from the paper. Use the functions in `src/estimate_functions.py` to create your own examples. The rest of the modules in `src/` just contain helper functions.
-- Necessary datasets will be stored in `data/` after running either `src/example_three.py` or `tests/check_concrete_pushforward.py`. These modules will download a concrete dataset and store the raw version in `data/raw_concrete.csv` and a processed version in  `data/processed_concrete.csv`. The original dataset is due to [^3] and can also be downloaded from the [UC Irvine Machine Learning Repository](https://archive.ics.uci.edu/dataset/165/concrete+compressive+strength).
-- Results from running the examples or certain tests are stored in `plots/`.
-- The code is tested in `tests/`. Three tests, `tests/check_pushforward.py`, `tests/check_concrete_pushforward.py`, `tests/test_probs_to_mesh.py` include visual tests and must be manually run. Their results are stored in `plots/tests/`.
+- The core functions are stored in the modules at the top level of
+  [`src/`](src). 
+- The examples are stored in [`src/examples/`](src/examples/).
+- Unit and integrated tests appear in [`tests/`](tests). 
+- Results from running the examples or certain tests are stored in
+  [`data/`](data) and [`plots/`](plots).
 
-[^3]: Yeh, I. C. (1998). Modeling of strength of high-performance concrete using artificial neural networks. *Cement and Concrete research, 28*(12), 1797-1808.
+## Create Custom Experiments
+
+If you wish to easily run experiments using my existing examples, consult
+[`tutorial.md`](tutorial.md). That document recaps how the constrained SCP
+algorithm works, introduces each of the examples, and explains how to modify
+them for your own purposes.
 
 
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
 
+## Issues
 
+If you spot any bugs or have questions, feel free to raise a GitHub Issue or
+contact me via email.
