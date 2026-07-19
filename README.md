@@ -15,8 +15,7 @@ to reproduce all experiments highlighted in the forthcoming paper[^2].
     preprint arXiv:2509.22597.*
 
 [^2]: Prasadan, A., Basu, S., Yazdi, F., Bingham, D., and Estep, D., 2026.
-    Non-Parametric Model Calibration with Partially Known  Stochastic Input
-    Distributions. *In preparation*.
+    Non-Parametric Model Calibration with  Stochastic Control Parameters. *In preparation*.
 
 [^3]: Prasadan, A., Estep, D. and Bingham, D., 2026. Continuity of the Solution
     of a Non-Parametric Bayesian Statistical Calibration Procedure. *arXiv
