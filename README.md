@@ -10,12 +10,13 @@ arbitrary input and output dimensions, although for the constrained SCP, there
 are some additional restrictions. The repo then includes several examples needed
 to reproduce all experiments highlighted in the forthcoming paper[^2].
 
-[^1]: Shi, H., Yang, L., Chi, J., Butler, T., Wang, H., Bingham, D., & Estep, D.
-    (2026). Nonparametric Bayesian Calibration of Computer Models. *arXiv
+[^1]: Shi, H., Yang, L., Chi, J., Butler, T., Wang, H., Bingham, D., & Estep, D.,
+    2026. Nonparametric Bayesian Calibration of Computer Models. *arXiv
     preprint arXiv:2509.22597.*
 
 [^2]: Prasadan, A., Basu, S., Yazdi, F., Bingham, D., and Estep, D., 2026.
-    Non-Parametric Model Calibration with  Stochastic Control Parameters. *In preparation*.
+    Non-Parametric Model Calibration with  Stochastic Control Parameters. 
+    *arXiv preprint arXiv:2607.16975.*
 
 [^3]: Prasadan, A., Estep, D. and Bingham, D., 2026. Continuity of the Solution
     of a Non-Parametric Bayesian Statistical Calibration Procedure. *arXiv
